@@ -2,3 +2,13 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# RInno files
+Rinno_files/AppInventarioNativas.bat
+Rinno_files/AppInventarioNativas.iss
+Rinno_files/default.ico
+Rinno_files/exe_folder/
+Rinno_files/infoafter.txt
+Rinno_files/infobefore.txt
+Rinno_files/setup.ico
+Rinno_files/utils/
