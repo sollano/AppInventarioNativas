@@ -1,0 +1,34 @@
+Versão Pré-Release
+
+Para rodar este apliativo é necessário ter instalado no computador o Java e a versão x86 (32bits) do R 3.4.1. 
+
+Este aplicativo é o produto de uma dissertação de mestrado em andamento, realizada na Universidade federal dos Vales do Jequitinhonha e Mucuri - UFVJM, no laboratório de Manejo Florestal/treelab, Departamento de Engenharia Florestal, Diamantina/MG.
+
+App criado por:
+
+Sollano Rabelo Braga, Eric Bastos Gorgens & Marcio Leles R. de Oliveira
+
+Dúvidas, e-mails, bugs, e sugestões, por favor utilize:
+
+sollanorb@gmail.com
+e.gorgens@gmail.com
+marcioromarco@gmail.com
+
+ou crie um issue na página do github:
+https://github.com/sollano/AppInventarioNativas
+
+Para citar e referenciar este app, utilize:
+
+(BRAGA; GORGENS; OLIVEIRA, 2017)
+
+BRAGA, S. R.; GORGENS, E. B; OLIVEIRA, M. L. R. DE. Inventário de Nativas: Aplicativo shiny para processamento de inventário de florestas nativas, 2017. Disponível em: https://github.com/sollano.
+
+Referências:
+
+CAMPOS, J. C. C.; LEITE, H. G. Mensuração florestal: perguntas e respostas. 3ª. ed. Viçosa: Editora UFV, 2013. 605 p.
+
+SOARES, C. P. B.; NETO, F. D. P.; SOUZA, A. L. D. Dendrometria e Inventário Florestal. 2ª. ed. Viçosa: UFV, 2012. 272 p.
+
+SOUZA, A. L. D; SOARES, C. P. B. Florestas Nativas: estrutura, dinâmica e manejo. 1ª. ed. Viçosa: UFV, 2013. 322 p.
+
+Created under GNU licence.
