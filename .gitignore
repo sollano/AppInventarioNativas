@@ -2,7 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-
+# build code
+build_exe.R
 # RInno files
 Rinno_files/AppInventarioNativas.bat
 Rinno_files/AppInventarioNativas.iss
