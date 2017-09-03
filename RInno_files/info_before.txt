@@ -1,4 +1,4 @@
-Versão Pré-Release
+Versão Pre-Release
 
 Para rodar este apliativo é necessário ter instalado no computador o Java e a versão x86 (32bits) do R 3.4.1. 
 
