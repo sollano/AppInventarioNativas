@@ -36,6 +36,7 @@ source("funs/estrat_vert_souza.R"  , encoding="UTF-8")
 source("funs/classe_diametro.R"    , encoding="UTF-8")
 source("funs/htdapratio.R"         , encoding="UTF-8")
 source("funs/consistency.R"        , encoding="UTF-8")
+source("funs/xlsx.write.list.R"    , encoding="UTF-8")
 
 # Funcao para testar se uma variavel e numerica
 # Sera utilizada dentro da funcao validate
@@ -419,7 +420,7 @@ shinyServer(function(input, output, session) {
     selectizeInput("col.est.vertical",
                    NULL, # nome que sera mostrado na UI
                    choices = names(data),
-                  # selected =  ,
+                   # selected =  ,
                    multiple = T,
                    options = list(
                      maxItems = 1,
@@ -651,13 +652,13 @@ shinyServer(function(input, output, session) {
 
     list(
 
-    h3("Calcular Estrutura interna"),
+      h3("Calcular Estrutura interna"),
 
-    h5("A estrutura interna será calculada utilizando a variável altura, segundo o método de Souza (2002)"),
+      h5("A estrutura interna será calculada utilizando a variável altura, segundo o método de Souza (2002)"),
 
-    radioButtons("est.vert.calc",
-                  "Deseja classificar a estrutura interna utilizando a variável altura?",
-                 c("Sim", "Nao"), "Nao" )
+      radioButtons("est.vert.calc",
+                   "Deseja classificar a estrutura interna utilizando a variável altura?",
+                   c("Sim", "Nao"), "Nao" )
     )
 
   })
@@ -678,7 +679,7 @@ shinyServer(function(input, output, session) {
     # Elas serao mostradas em vermelho, devido a errorClass (definida no comeco da UI )
     #validate(
     #  need(is.numeric(data[[nm$dap]]), "dap column must be numeric"),
-     # need(is.numeric(data[[nm$ht]]), "ht column must be numeric"), errorClass = "WRONG")
+    # need(is.numeric(data[[nm$ht]]), "ht column must be numeric"), errorClass = "WRONG")
 
 
     # o primeiro if sera para remover as linhas
@@ -799,7 +800,7 @@ shinyServer(function(input, output, session) {
     data
 
   })
- # render
+  # render
   output$prep_table <- DT::renderDataTable({
 
     validate(need(rawData(), "Please import a dataset"))
@@ -880,18 +881,18 @@ shinyServer(function(input, output, session) {
       NI=input$rotutuloNI,
       IC=input$int.classe,
       diam.min=input$diam.min
-      )
+    )
 
     if(is.null(input$num.area.parcela)|| is.na(input$num.area.parcela) ||input$num.area.parcela==""){}else{varnameslist$area.parcela <- input$num.area.parcela  }
     if(is.null(input$num.area.total) || is.na(input$num.area.total) ||input$num.area.total==""){}else{varnameslist$area.total <- input$num.area.total  }
 
     if( !is.null(input$b0_estvol) && !is.na(input$b0_estvol) && !is.null(input$b1_estvol) && !is.na(input$b1_estvol)  ){
       varnameslist$vcc <- "VOL"
-      }
+    }
 
     if(!is.null(input$est.vert.calc) && !is.na(input$est.vert.calc) && input$est.vert.calc=="Sim"){
       varnameslist$est.vertical <- "est.vert"
-      }
+    }
 
 
     # Os nomes nao selecionados serao salvos como NULL na lista,
@@ -979,7 +980,7 @@ shinyServer(function(input, output, session) {
     datatable(consist_data,
 
               options = list(
-   #             width = "200px",
+                #             width = "200px",
                 initComplete = JS(
                   "function(settings, json) {",
                   "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
@@ -1006,14 +1007,14 @@ shinyServer(function(input, output, session) {
 
     # Se o usuario nao quiser realizar a anlise por parcela, o elemento parcelas da lista sera nulo,
     # mesmo que o usuario tenha mapeado a variavel parcela na aba de mapeamento.
-     if(input$rb_div=="Nao"){nm$parcelas=NULL}
+    if(input$rb_div=="Nao"){nm$parcelas=NULL}
 
-      x <- diversidade(data             = dados,
-                       col.especies     = nm$especies,
-                       col.parcelas     = nm$parcelas,
-                       rotulo.NI        = nm$NI  ) # %>%
-      #gather("Índice", "Resultado") # transpor tabela
-      x
+    x <- diversidade(data             = dados,
+                     col.especies     = nm$especies,
+                     col.parcelas     = nm$parcelas,
+                     rotulo.NI        = nm$NI  ) # %>%
+    #gather("Índice", "Resultado") # transpor tabela
+    x
 
   })
 
@@ -1061,47 +1062,47 @@ shinyServer(function(input, output, session) {
   output$msim1 <- DT::renderDataTable({
 
 
-      x <- tabmsimilaridade()
-      x <- as.data.frame(x[[1]])
-      names(x) <- 1:length(x)
+    x <- tabmsimilaridade()
+    x <- as.data.frame(x[[1]])
+    names(x) <- 1:length(x)
 
 
-      msimdt1 <- tibble::rownames_to_column(x, " ")
+    msimdt1 <- tibble::rownames_to_column(x, " ")
 
-      datatable( msimdt1,
-                 rownames = F,
-                 options = list(searching = FALSE,
-                                paging=FALSE,
-                                ordering=FALSE,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                  "}")
-                 )
-      ) %>%
-        formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
+    datatable( msimdt1,
+               rownames = F,
+               options = list(searching = FALSE,
+                              paging=FALSE,
+                              ordering=FALSE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+               )
+    ) %>%
+      formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
 
   })
   output$msim2 <- DT::renderDataTable({
 
-      x <- tabmsimilaridade()
-      x <- as.data.frame(x[[2]])
-      names(x) <- 1:length(x)
+    x <- tabmsimilaridade()
+    x <- as.data.frame(x[[2]])
+    names(x) <- 1:length(x)
 
-      msimdt2 <- tibble::rownames_to_column(x, " ")
+    msimdt2 <- tibble::rownames_to_column(x, " ")
 
-      datatable( msimdt2,
-                 rownames = F,
-                 options = list(searching = FALSE,
-                                paging=FALSE,
-                                ordering=FALSE,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                  "}")
-                 )
-      ) %>%
-        formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
+    datatable( msimdt2,
+               rownames = F,
+               options = list(searching = FALSE,
+                              paging=FALSE,
+                              ordering=FALSE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+               )
+    ) %>%
+      formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
 
   })
 
@@ -1110,24 +1111,24 @@ shinyServer(function(input, output, session) {
 
     # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
     req(input$mainPanel_Indices %in% c("id_msim1_graph", "id_msim2_graph") ||  input$graph_d %in% c("Dendrograma - Jaccard","Dendrograma - Sorensen") )
-      radioButtons("rb_msim_graph",
-                   "Selecione o método de classificação:",
-                   c("Vizinho mais próximo"  = "single",
-                     "Vizinho mais distante" = "complete",
-                     "Distância euclidiana"  = "average"),
-                   selected = "complete", inline = T)
-      })
+    radioButtons("rb_msim_graph",
+                 "Selecione o método de classificação:",
+                 c("Vizinho mais próximo"  = "single",
+                   "Vizinho mais distante" = "complete",
+                   "Distância euclidiana"  = "average"),
+                 selected = "complete", inline = T)
+  })
   output$slider_graphmsim <- renderUI({
 
     # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
     req(input$mainPanel_Indices %in% c("id_msim1_graph", "id_msim2_graph") ||  input$graph_d %in% c("Dendrograma - Jaccard","Dendrograma - Sorensen") )
 
-       sliderInput("slider_msim_graph",
-                  label = "Selecione o número de clusters:",
-                  min = 1,
-                  max = 10,
-                  value = 3,
-                  step = 1)
+    sliderInput("slider_msim_graph",
+                label = "Selecione o número de clusters:",
+                min = 1,
+                max = 10,
+                value = 3,
+                step = 1)
 
   })
 
@@ -1148,24 +1149,24 @@ shinyServer(function(input, output, session) {
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  ") )
 
-      df <- as.data.frame(tabmsimilaridade()[[1]] )
+    df <- as.data.frame(tabmsimilaridade()[[1]] )
 
-      rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
+    rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
 
-      hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
-      dendr <- ggdendro::dendro_data(hc) # convert for ggplot
-      clust    <- cutree(hc,k=input$slider_msim_graph)                    # find 2 clusters
-      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
+    hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
+    dendr <- ggdendro::dendro_data(hc) # convert for ggplot
+    clust    <- cutree(hc,k=input$slider_msim_graph)                    # find 2 clusters
+    clust.df <- data.frame(label=names(clust), cluster=factor(clust))
 
-      # dendr[["labels"]] has the labels, merge with clust.df based on label column
-      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
-      # plot the dendrogram; note use of color=cluster in geom_text(...)
+    # dendr[["labels"]] has the labels, merge with clust.df based on label column
+    dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+    # plot the dendrogram; note use of color=cluster in geom_text(...)
 
-      x <- ggdendro::ggdendrogram(dendr) +
-        geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
-        ggdendro::theme_dendro()
+    x <- ggdendro::ggdendrogram(dendr) +
+      geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+      ggdendro::theme_dendro()
 
-      x
+    x
 
   })
   output$msim1_graph_ <- renderPlot({
@@ -1196,20 +1197,20 @@ shinyServer(function(input, output, session) {
 
     rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
 
-      hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
-      dendr <- ggdendro::dendro_data(hc) # convert for ggplot
-      clust    <- cutree(hc,k=input$slider_msim_graph)
-      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
+    hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
+    dendr <- ggdendro::dendro_data(hc) # convert for ggplot
+    clust    <- cutree(hc,k=input$slider_msim_graph)
+    clust.df <- data.frame(label=names(clust), cluster=factor(clust))
 
-      # dendr[["labels"]] has the labels, merge with clust.df based on label column
-      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
-      # plot the dendrogram; note use of color=cluster in geom_text(...)
+    # dendr[["labels"]] has the labels, merge with clust.df based on label column
+    dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+    # plot the dendrogram; note use of color=cluster in geom_text(...)
 
-      x <- ggdendro::ggdendrogram(dendr) +
-        geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
-        ggdendro::theme_dendro()
+    x <- ggdendro::ggdendrogram(dendr) +
+      geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+      ggdendro::theme_dendro()
 
-      x
+    x
 
 
   })
@@ -1276,7 +1277,7 @@ shinyServer(function(input, output, session) {
       need(nm$dap,"Por favor selecione a coluna referente a 'especies'  "),
       need(nm$area.parcela,"Por favor selecione a coluna referente a 'especies'  ")
 
-      )
+    )
 
     x <- estrutura(data             = dados,
                    col.especies     = nm$especies,
@@ -1295,7 +1296,7 @@ shinyServer(function(input, output, session) {
   output$estr <- renderDataTable({
 
     estrdt <- round_df( tabestrutura(), 4 )
-   # estrdt <- tabestrutura()
+    # estrdt <- tabestrutura()
 
     datatable( as.tbl(estrdt),
                options = list(searching = T,
@@ -1315,7 +1316,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(tabestrutura(), "Por favor faça a análise estrutural")  )
 
-        tabestrutura() %>%
+    tabestrutura() %>%
       arrange(-IVI) %>%
       mutate(n = as.numeric(row.names(.)), class = ifelse(n>input$n_IVI_g,"Demais especies",as.character(especie)),class = factor(class, levels=unique(class)) )%>%
       gather(IVI_contrib, valor, FR , DR , DoR, factor_key = T) %>%
@@ -1336,7 +1337,6 @@ shinyServer(function(input, output, session) {
         panel.border = element_blank(),
         axis.title   = element_text(size = 26,face="bold"),
         axis.text    = element_text(size = 22),
-        axis.text.y = element_text(size = 22, face = "italic"),
         axis.line.x = element_line(color="black"),
         axis.line.y = element_line(color="black"),
         strip.text.x = element_text(size = 22)   ) +
@@ -1375,51 +1375,51 @@ shinyServer(function(input, output, session) {
                                            rotulo.NI = nm$NI )
 
     lista[["dd_especie"]] <- classe_diametro(df = dados,
-                                           dap = nm$dap,
-                                           parcela = nm$parcelas,
-                                           area_parcela = nm$area.parcela,
-                                           ic = nm$IC,
-                                           dapmin = nm$diam.min,
-                                           especies = nm$especies,
-                                           volume = nm$vcc,
-                                           rotulo.NI = nm$NI )
-
-    lista[["dd_especie_indv_cc_column"]] <- classe_diametro(df = dados,
                                              dap = nm$dap,
                                              parcela = nm$parcelas,
                                              area_parcela = nm$area.parcela,
                                              ic = nm$IC,
                                              dapmin = nm$diam.min,
                                              especies = nm$especies,
-                                             volume = NA,
-                                             rotulo.NI = nm$NI,
-                                             cc_to_column = T,
-                                             cctc_ha = T )
+                                             volume = nm$vcc,
+                                             rotulo.NI = nm$NI )
+
+    lista[["dd_especie_indv_cc_column"]] <- classe_diametro(df = dados,
+                                                            dap = nm$dap,
+                                                            parcela = nm$parcelas,
+                                                            area_parcela = nm$area.parcela,
+                                                            ic = nm$IC,
+                                                            dapmin = nm$diam.min,
+                                                            especies = nm$especies,
+                                                            volume = NA,
+                                                            rotulo.NI = nm$NI,
+                                                            cc_to_column = T,
+                                                            cctc_ha = T )
 
     lista[["dd_especie_vol_cc_column"]] <- classe_diametro(df = dados,
-                                                      dap = nm$dap,
-                                                      parcela = nm$parcelas,
-                                                      area_parcela = nm$area.parcela,
-                                                      ic = nm$IC,
-                                                      dapmin = nm$diam.min,
-                                                      especies = nm$especies,
-                                                      volume = nm$vcc,
-                                                      rotulo.NI = nm$NI,
-                                                      cc_to_column = T,
-                                                      cctc_ha = T )
-
-    lista[["dd_especie_G_cc_column"]] <- classe_diametro(df = dados,
                                                            dap = nm$dap,
                                                            parcela = nm$parcelas,
                                                            area_parcela = nm$area.parcela,
                                                            ic = nm$IC,
                                                            dapmin = nm$diam.min,
                                                            especies = nm$especies,
-                                                           volume = NA,
+                                                           volume = nm$vcc,
                                                            rotulo.NI = nm$NI,
                                                            cc_to_column = T,
-                                                           G_to_cc = T,
                                                            cctc_ha = T )
+
+    lista[["dd_especie_G_cc_column"]] <- classe_diametro(df = dados,
+                                                         dap = nm$dap,
+                                                         parcela = nm$parcelas,
+                                                         area_parcela = nm$area.parcela,
+                                                         ic = nm$IC,
+                                                         dapmin = nm$diam.min,
+                                                         especies = nm$especies,
+                                                         volume = NA,
+                                                         rotulo.NI = nm$NI,
+                                                         cc_to_column = T,
+                                                         G_to_cc = T,
+                                                         cctc_ha = T )
 
     lista
   })
@@ -1438,7 +1438,7 @@ shinyServer(function(input, output, session) {
                                 "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
                                 "}")
                )
-             )
+    )
 
 
   })
@@ -1504,7 +1504,7 @@ shinyServer(function(input, output, session) {
 
     ggplot(g, aes(as.factor(CC),IndvHA)) +
       geom_bar(stat = "identity",color="black")+
-   #   scale_y_continuous( expand=c(0,15) ) +
+      #   scale_y_continuous( expand=c(0,15) ) +
       ggthemes::theme_igray(base_family = "serif") +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Nº de Individuos por hectare") +
       geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
@@ -1533,7 +1533,7 @@ shinyServer(function(input, output, session) {
 
     ggplot(g, aes(as.factor(CC),volume_ha)) +
       geom_bar(stat = "identity",color="black")+
-    #  scale_y_continuous( expand=c(0,15) ) +
+      #  scale_y_continuous( expand=c(0,15) ) +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Volume por hectare") +
       ggthemes::theme_igray(base_family = "serif") +
       geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
@@ -1560,7 +1560,7 @@ shinyServer(function(input, output, session) {
 
     ggplot(g, aes(as.factor(CC),G_ha)) +
       geom_bar(stat = "identity",color="black")+
-     # scale_y_continuous( expand=c(0,15) ) +
+      # scale_y_continuous( expand=c(0,15) ) +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Área Basal (G) por hectare") +
       ggthemes::theme_igray(base_family = "serif") +
       geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
@@ -1972,6 +1972,117 @@ shinyServer(function(input, output, session) {
 
   # Download tabelas ####
 
+  output$checkbox_df_download <- renderUI({
+
+    checkboxGroupInput("dataset", h3("Escolha uma ou mais tabelas, e clique no botão abaixo:"),
+                       choices =  c(
+                         "Dados inconsistentes"              ,
+                         "Dado utilizado / preparado"        ,
+                         "Indice diversidade"                ,
+                         "Matriz similaridade - Jaccard"     ,
+                         "Matriz similaridade - Sorensen"    ,
+                         "Indice de agregacao"               ,
+                         "Estrutura"                         ,
+                         "Distribuicao diametrica geral"     ,
+                         "Dist. Diametrica Indv. por especie",
+                         "Dist. Diametrica Vol. por especie" ,
+                         "Dist. Diametrica G por especie"    ,
+                         "BDq Meyer"                         ,
+                         "BDq Meyer - Coeficientes"          ,
+                         "Totalizacao de parcelas"           ,
+                         "Amostragem Casual Simples"         ,
+                         "Amostragem Casual Estratificada 1" ,
+                         "Amostragem Casual Estratificada 2" ,
+                         "Amostragem Sistematica"
+                       ), inline = T )
+
+
+  })
+
+  list_of_df_to_download <- reactive({
+
+    L <- list()
+
+    if("Dados inconsistentes" %in% input$dataset ) {
+      L[["Dados inconsistentes"]] <- try( consist_fun(), silent = T)
+    }
+
+    if("Dado utilizado / preparado" %in% input$dataset ) {
+      L[["Dado utilizado / preparado"]] <-  try(rawData(), silent = T)
+    }
+
+    if("Indice diversidade" %in% input$dataset ) {
+      L[["Indice diversidade"]] <-  try(tabdiversidade(), silent=T)
+    }
+
+    if("Matriz similaridade - Jaccard" %in% input$dataset ) {
+      L[["Matriz similaridade - Jaccard"]] <-  try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "), silent=T)
+    }
+
+
+    if("Matriz similaridade - Sorensen" %in% input$dataset ) {
+      L[["Matriz similaridade - Sorensen"]] <- try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " ") , silent=T)
+    }
+
+    if("Indice de agregacao" %in% input$dataset ) {
+      L[["Indice de agregacao"]] <-  try(tabagregate(), silent=T)
+    }
+
+    if("Estrutura" %in% input$dataset ) {
+      L[["Estrutura"]] <- try(tabestrutura() , silent = T)
+    }
+
+    if("Distribuicao diametrica geral" %in% input$dataset ) {
+      L[["Distribuicao diametrica geral"]] <-  try(dd_list()[["dd_geral"]], silent=T)
+    }
+
+    if("Dist. Diametrica Indv. por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica Indv. por especie"]] <- try(dd_list()[["dd_especie_indv_cc_column"]] , silent=T)
+    }
+
+    if("Dist. Diametrica Vol. por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica Vol. por especie"]] <- try(dd_list()[["dd_especie_vol_cc_column"]]  , silent=T)
+    }
+
+    if("Dist. Diametrica G por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica G por especie"]] <- try(dd_list()[["dd_especie_G_cc_column"]], silent=T)
+    }
+
+    if("BDq Meyer" %in% input$dataset ) {
+      L[["BDq Meyer"]] <-   try(BDq_list()[[1]], silent=T)
+    }
+
+    if("BDq Meyer - Coeficientes"  %in% input$dataset ) {
+      L[["BDq Meyer - Coeficientes" ]] <- try( data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )), silent=T)
+    }
+
+    if("Totalizacao de parcelas" %in% input$dataset ) {
+      L[["Totalizacao de parcelas"]] <- try(totData() , silent=T)
+    }
+
+    if("Amostragem Casual Simples" %in% input$dataset ) {
+      L[["Amostragem Casual Simples"]] <- try(tabacs() , silent=T)
+    }
+
+    if("Amostragem Casual Estratificada 1" %in% input$dataset ) {
+      L[["Amostragem Casual Estratificada 1"]] <- try(list_ace()[[1]], silent = T)
+    }
+
+    if("Amostragem Casual Estratificada 2" %in% input$dataset ) {
+      L[["Amostragem Casual Estratificada 2"]] <- try(list_ace()[[2]] , silent=T)
+    }
+
+    if("Amostragem Sistematica" %in% input$dataset ) {
+      L[["Amostragem Sistematica"]] <- try( tabas() , silent=T)
+    }
+
+    L
+
+  })
+
+
+  output$valor_checkbox <- renderPrint({input$dataset})
+
   datasetInput <- reactive({
     switch(input$dataset,
            "Dados inconsistentes"              = consist_fun(),
@@ -1999,7 +2110,7 @@ shinyServer(function(input, output, session) {
 
     datadownload <- datasetInput()
 
-    datatable( datadownload,
+    datatable( list_of_df_to_download(),
                options = list(searching = FALSE,
                               paging=T,
                               initComplete = JS(
@@ -2012,31 +2123,10 @@ shinyServer(function(input, output, session) {
   })
 
   output$downloadData <- downloadHandler(
-    filename = function() {
+    filename = function(){"tabelas_app.xlsx"},
 
-      if(input$datasetformat==".csv")
-      {
-        paste(input$dataset, '.csv', sep='')
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        paste(input$dataset, '.xlsx', sep='')
-      }
-    },
+    content = function(file){xlsx.write.list(file, list_of_df_to_download() )}
 
-    content = function(file) {
-      if(input$datasetformat==".csv")
-      {
-        write.csv2(datasetInput(), file, row.names = F)
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        xlsx::write.xlsx2(as.data.frame( datasetInput() ), file, row.names = F)
-      }
-
-
-
-    }
   )
 
   # Download graficos ####
@@ -2086,13 +2176,11 @@ shinyServer(function(input, output, session) {
 
     }
   )
-
-  # ####
-  # session end
-  session$onSessionEnded(function() {
-    stopApp()
-    q("no")
-  })
+  # session end ####
+  # session$onSessionEnded(function() {
+  #  stopApp()
+  #  q("no")
+  #})
   # ####
 })
 
