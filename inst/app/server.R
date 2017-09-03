@@ -2177,10 +2177,10 @@ shinyServer(function(input, output, session) {
     }
   )
   # session end ####
-  # session$onSessionEnded(function() {
-  #  stopApp()
-  #  q("no")
-  #})
+   session$onSessionEnded(function() {
+    stopApp()
+    q("no")
+  })
   # ####
 })
 
