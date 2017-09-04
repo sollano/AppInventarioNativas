@@ -2079,46 +2079,48 @@ shinyServer(function(input, output, session) {
     L
 
   })
+  list_of_df_all <- reactive({
+
+    L <- list()
+
+    L[["Dados inconsistentes"]] <- try( consist_fun(), silent = T)
 
 
-  output$valor_checkbox <- renderPrint({input$dataset})
+    L[["Dado utilizado / preparado"]] <-  try(rawData(), silent = T)
 
-  datasetInput <- reactive({
-    switch(input$dataset,
-           "Dados inconsistentes"              = consist_fun(),
-           "Dado utilizado / preparado"        = rawData(),
-           "Indice diversidade"                = tabdiversidade(),
-           "Matriz similaridade - Jaccard"     = tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "),
-           "Matriz similaridade - Sorensen"    = tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " "),
-           "Indice de agregacao"               = tabagregate(),
-           "Estrutura"                         = tabestrutura(),
-           "Distribuicao diametrica geral"     = dd_list()[["dd_geral"]],
-           "Dist. Diametrica Indv. por especie"= dd_list()[["dd_especie_indv_cc_column"]],
-           "Dist. Diametrica Vol. por especie" = dd_list()[["dd_especie_vol_cc_column"]],
-           "Dist. Diametrica G por especie"    = dd_list()[["dd_especie_G_cc_column"]],
-           "BDq Meyer"                         = BDq_list()[[1]],
-           "BDq Meyer - Coeficientes"          = data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )),
-           "Totalizacao de parcelas"           = totData(),
-           "Amostragem Casual Simples"         = tabacs(),
-           "Amostragem Casual Estratificada 1" = list_ace()[[1]],
-           "Amostragem Casual Estratificada 2" = list_ace()[[2]],
-           "Amostragem Sistematica"            = tabas()
-    )
-  })
+    L[["Indice diversidade"]] <-  try(tabdiversidade(), silent=T)
 
-  output$table <- renderDataTable({
+    L[["Matriz similaridade - Jaccard"]] <-  try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "), silent=T)
 
-    datadownload <- datasetInput()
+    L[["Matriz similaridade - Sorensen"]] <- try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " ") , silent=T)
 
-    datatable( list_of_df_to_download(),
-               options = list(searching = FALSE,
-                              paging=T,
-                              initComplete = JS(
-                                "function(settings, json) {",
-                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                "}")
+    L[["Indice de agregacao"]] <-  try(tabagregate(), silent=T)
 
-               )  )
+    L[["Estrutura"]] <- try(tabestrutura() , silent = T)
+
+    L[["Distribuicao diametrica geral"]] <-  try(dd_list()[["dd_geral"]], silent=T)
+
+    L[["Dist. Diametrica Indv. por especie"]] <- try(dd_list()[["dd_especie_indv_cc_column"]] , silent=T)
+
+    L[["Dist. Diametrica Vol. por especie"]] <- try(dd_list()[["dd_especie_vol_cc_column"]]  , silent=T)
+
+    L[["Dist. Diametrica G por especie"]] <- try(dd_list()[["dd_especie_G_cc_column"]], silent=T)
+
+    L[["BDq Meyer"]] <-   try(BDq_list()[[1]], silent=T)
+
+    L[["BDq Meyer - Coeficientes" ]] <- try( data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )), silent=T)
+
+    L[["Totalizacao de parcelas"]] <- try(totData() , silent=T)
+
+    L[["Amostragem Casual Simples"]] <- try(tabacs() , silent=T)
+
+    L[["Amostragem Casual Estratificada 1"]] <- try(list_ace()[[1]], silent = T)
+
+    L[["Amostragem Casual Estratificada 2"]] <- try(list_ace()[[2]] , silent=T)
+
+    L[["Amostragem Sistematica"]] <- try( tabas() , silent=T)
+
+    L
 
   })
 
@@ -2126,6 +2128,13 @@ shinyServer(function(input, output, session) {
     filename = function(){"tabelas_app.xlsx"},
 
     content = function(file){xlsx.write.list(file, list_of_df_to_download() )}
+
+  )
+
+  output$downloadAllData <- downloadHandler(
+    filename = function(){"tabelas_app.xlsx"},
+
+    content = function(file){xlsx.write.list(file, list_of_df_all() )}
 
   )
 
