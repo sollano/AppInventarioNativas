@@ -1,11 +1,10 @@
 Package: AppInventarioNativas
 Type: Package
 Title: AppInventarioNativas
-Version: 0.0.1666
-Author: Who wrote it
+Version: 1.0.0
+Author: Sollano Rabelo Braga
 Maintainer: Sollano Rabelo Braga <sollanorb@gmail.com>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: Shiny app for processing natural forests data.
+License: GNU
 Encoding: UTF-8
 LazyData: true

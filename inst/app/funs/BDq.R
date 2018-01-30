@@ -16,8 +16,8 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   
   # Estrutura diametrica
   
-  data[,"Classe"] = ceiling(data[,DBH] /  INTERVALO.CLASSE)
-  data[, "CentroClasse"] = data[,"Classe"] * INTERVALO.CLASSE - (INTERVALO.CLASSE / 2)
+  data[,"Classe"] = trunc(data[,DBH] /  INTERVALO.CLASSE)
+  data[, "CentroClasse"] = data[,"Classe"] * INTERVALO.CLASSE + (INTERVALO.CLASSE / 2)
   
   freq = data.frame(table(data[,"Classe"]))
   DD = data.frame(Classe = as.numeric(as.character(freq[,1])) ) # correcao fator para numerico
@@ -26,7 +26,7 @@ bdq.meyer = function(data, col.parcelas, col.dap, area.parcela, intervalo.classe
   # Alterei aqui para a area poder ser inserida em m2
   DD$IndvHectare = round(DD$NumIndv / ((AREA.PLOT/10000) * nplots), 1)
   DD = DD[DD$CentroClasse >= DBH.MIN,]
-  #DD = DD[DD$IndvHectare > 0,]
+  DD = DD[DD$IndvHectare > 0,]
   rm(freq)
   
   # Meyer

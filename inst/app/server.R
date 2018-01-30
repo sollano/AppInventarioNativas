@@ -1,24 +1,27 @@
-options(java.parameters = "-Xss2048k")
-library(DT)
+options(java.parameters = "-Xss2048k",shiny.maxRequestSize=25*1024^2)
+library(shiny)
+suppressPackageStartupMessages(library(DT))
 #library(plotly)
 library(formattable)
 library(readxl)
 #library(plyr)
 library(tibble)
 library(tidyr)
-library(dplyr)
+suppressPackageStartupMessages(library(dplyr))
 library(lazyeval)
 library(ggplot2)
 library(ggdendro)
 library(ggthemes)
-library(xlsx)
+suppressPackageStartupMessages(library(xlsx))
 library(rJava)
 library(xlsxjars)
-#library(rmarkdown)
+library(rmarkdown)
+library(stringr)
 
 # Data e functions
 
-ex <- read.csv("examples/Inventory_exemplo.csv",fileEncoding="UTF-8")
+ex_fuste <- read.csv2("examples/Inventory_exemplo_fuste.csv",fileEncoding="UTF-8")
+ex_arvore <- read.csv("examples/Inventory_exemplo_arvore.csv",fileEncoding="UTF-8")
 #ex <- read.csv("examples/Inventory_exemplo_2.csv",fileEncoding="UTF-8")
 
 source("funs/diversidade.R"        , encoding="UTF-8")
@@ -31,43 +34,28 @@ source("funs/acs.R"                , encoding="UTF-8")
 source("funs/ace.R"                , encoding="UTF-8")
 source("funs/as_diffs.R"           , encoding="UTF-8")
 source("funs/inv_summary.R"        , encoding="UTF-8")
+source("funs/arv_summary.R"        , encoding="UTF-8")
 source("funs/round_df.R"           , encoding="UTF-8")
 source("funs/estrat_vert_souza.R"  , encoding="UTF-8")
 source("funs/classe_diametro.R"    , encoding="UTF-8")
 source("funs/htdapratio.R"         , encoding="UTF-8")
 source("funs/consistency.R"        , encoding="UTF-8")
-
-# Funcao para testar se uma variavel e numerica
-# Sera utilizada dentro da funcao validate
-check_numeric <- function(input, df, code){
-
-  if(is.null(input) ){
-
-
-  }else if(is.na(input)){
-
-
-  }else if(input == ""){
-
-  }else if(!is.null(input) && !is.numeric(df[[input]]) ){
-
-    paste(code, "column must be numeric")
-
-  }
-
-}
+source("funs/xlsx.write.list.R"    , encoding="UTF-8")
+source("funs/check_numeric.R"      , encoding="UTF-8")
+source("funs/notin.R"              , encoding="UTF-8")
 
 # vectors for names ####
 
-especies_names <- c("nome.cient","scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO")
+arvore_names <- c("ARVORE", "Arvore", "arvore", "ARV", "Arv", "arv", "ARV.", "Arv.", "arv.","NP","Np","np","Árvore","ÁRVORE","árvore" )
+especies_names <- c("nome.cient","scientific.name","Scientific.Name","SCIENTIFIC.NAME" ,"scientific_name", "Scientific_Name","SCIENTIFIC_NAME","nome.cientifico", "Nome.Cientifico","NOME.CIENTIFICO","nome_cientifico", "Nome_Cientifico","NOME_CIENTIFICO","nome.cientifíco", "Nome.Científico","NOME.CIENTÍFICO","nome_científico", "Nome_Científico","NOME_CIENTÍFICO","nome cientifico", "Nome Cientifico","NOME CIENTIFICO","nome científico", "Nome Científico","NOME CIENTÍFICO","Especie", "especie", "Especies", "especies","Espécie", "espécie", "Espécies", "espécies")
 parcelas_names <- c("transecto","transect", "Transect", "TRNASECT", "transect.code","Transect.Code","TRANSECT.CODE","transect_code","Transect_Code","TRANSECT_CODE","parcela", "Parcela","PARCELA","cod.parcela","Cod.Parcela","COD.PARCELA", "cod_parcela","Cod_Parcela","COD_PARCELA")
 est.vertical_names <- c("pos.copa","canopy", "canopy_09")
 est.interno_names <- c("luminosidade","light", "light_09")
 
-
-DAP_names <- c("DAP","Dap","dap", "dbh", "Dbh","DBH","DBH_11")
-HT_names <- c("HT_EST", "HT", "Ht", "ht","Htot","ALTURA","Altura","Altura_Total", "ALTURA_TOTAL")
-VCC_names <- c("VCC","Vcc", "vcc", "VOL", "Vol", "vol" ,"VOLUME")
+CAP_names <- c("CAP","Cap","cap", "cbh", "Cbh","CBH","CBH_11","CAP(cm)","CAP(cm)","Cap (cm)","Cap(cm)")
+DAP_names <- c("DAP","Dap","dap", "dbh", "Dbh","DBH","DBH_11","DAP(cm)","DAP(cm)","Dap (cm)","Dap(cm)")
+HT_names <- c("HT_EST", "HT", "Ht", "ht","Htot","ALTURA","Altura","Altura_Total", "ALTURA_TOTAL","HT (m)","HT(m)","Ht (m)","Ht(m)","Altura Total (m)","Altura total(m)")
+VCC_names <- c("VCC","Vcc", "vcc", "VOL", "Vol", "vol" ,"VOLUME", "Volume (m³)", "VOLUME (m³)", "VOL(m³)", "Volume(m³)", "VOLUME(m³)", "VOL(m³)")
 area_parcela_names <- c("trans.area","AREA_PARCELA","Area_Parcela","area_parcela","parc.area" ,"AREAPARCELA", "areaparcela", "transect.area", "Transect.Area", "TRANSECT.AREA","transect_area","Transect_Area","TRANSECT_AREA")
 area_total_names <- c("sub.area","AREA_TOTAL", "AREATOTAL", "area_total", "areatotal","AREA_TALHAO", "AREATALHAO", "area_talhao", "areatalhao","total.area","Total.Area","TOTAL.AREA","total_area","Total_Area","TOTAL_AREA", "area.total", "Area.total", "Area.Total", "AREA.TOTAL")
 idade_names <- c("IDADE", "Idade","idade")
@@ -89,13 +77,6 @@ shinyServer(function(input, output, session) {
     validate(need(input$df_select == "Fazer o upload", "" )  )
 
     list(
-
-      radioButtons("df",
-                   "Tipo da base de dados:",
-                   choices = c("Dados em nivel de arvore",
-                               "Dados em nivel de parcela"),
-                   selected = "Dados em nivel de arvore"),
-
 
       radioButtons("df_extension",
                    "Informe o formato do arquivo:",
@@ -213,12 +194,13 @@ shinyServer(function(input, output, session) {
     # sera retornanado vazio
     switch(input$df_select,
            "Fazer o upload" = if(is.null(input$file1) && is.null(input$file2)){return()}else{upData()},
-           "Utilizar o dado de exemplo" = ex)
+           "Utilizar o dado de exemplo em nivel de fuste" = ex_fuste,
+           "Utilizar o dado de exemplo em nivel de arvore" = ex_arvore )
 
   })
 
   # render table
-  output$rawdata <- renderDataTable({ # renderizamos uma DT::DataTable
+  output$rawdata <- DT::renderDataTable({ # renderizamos uma DT::DataTable
 
     validate(need(!is.null(rawData_()), "Please import a dataset"))
 
@@ -243,15 +225,17 @@ shinyServer(function(input, output, session) {
   # Mapeamento ####
 
   # ui
-  output$selec_especies     <- renderUI({
+
+
+  output$selec_arvore       <- renderUI({
 
     data <- rawData_()
 
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
-      "col.especies", # Id
-      NULL, # nome que sera mostrado na UI
+      "col.arvore", # Id
+      "Esta variável é necessária para o processamento de dados em nível de fuste", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
-      selected = especies_names,
+      selected = arvore_names,
       multiple=T,
       options = list(
         maxItems = 1,
@@ -282,13 +266,53 @@ shinyServer(function(input, output, session) {
 
 
   })
+  output$selec_especies     <- renderUI({
+
+    data <- rawData_()
+
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.especies", # Id
+      NULL, # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = especies_names,
+      multiple=T,
+      options = list(
+        maxItems = 1,
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    ) # selctize
+
+    # obs: multiple = T & maxItems = 1, garantem que a celula fique vazia, caso o app falhe
+    # em tentar adivinhar o nome da especie
+  })
+
+  output$selec_cap          <- renderUI({
+
+    data <- rawData_()
+
+    selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
+      "col.cap", # Id
+      NULL, # nome que sera mostrado na UI
+      choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
+      selected = CAP_names,
+      multiple=T,
+      options = list(
+        maxItems = 1,
+        placeholder = 'selecione uma coluna abaixo'#,
+        #onInitialize = I('function() { this.setValue(""); }')
+      ) # options
+    ) # selctize
+
+
+  })
   output$selec_dap          <- renderUI({
 
     data <- rawData_()
 
     selectizeInput( # cria uma lista de opcoes em que o usuario pode clicar
       "col.dap", # Id
-      NULL, # nome que sera mostrado na UI
+      "Caso o CAP seja fornecido, o DAP será calculado automaticamente", # nome que sera mostrado na UI
       choices = names(data), # como as opcoes serao atualizadas de acordo com o arquivo que o usuario insere, deixamos este campo em branco
       selected = DAP_names,
       multiple=T,
@@ -301,7 +325,6 @@ shinyServer(function(input, output, session) {
 
 
   })
-
   output$selec_ht           <- renderUI({
 
     data <- rawData_()
@@ -321,6 +344,7 @@ shinyServer(function(input, output, session) {
 
 
   })
+
   output$selec_vcc          <- renderUI({
 
     data <- rawData_()
@@ -338,6 +362,40 @@ shinyServer(function(input, output, session) {
       ) # options
     ) # selctize
 
+
+  })
+  output$selec_area.parcela <- renderUI({
+
+    data <- rawData_()
+
+    selectizeInput("col.area.parcela",
+                   "Pode ser informada como valor numérico na aba 'Preparação dos dados'", # nome que sera mostrado na UI
+                   choices = names(data),
+                   selected = area_parcela_names,
+                   multiple = T,
+                   options = list(
+                     maxItems = 1,
+                     placeholder = 'Selecione uma coluna abaixo:'#,
+                     #    onInitialize = I('function() { this.setValue(""); }')
+                   ) # options
+    )# selectize
+
+  })
+  output$selec_area.total   <- renderUI({
+
+    data <- rawData_()
+
+    selectizeInput("col.area.total",
+                   "Pode ser informada como valor numérico na aba 'Preparação'dos dados", # nome que sera mostrado na UI
+                   choices = names(data),
+                   selected = area_total_names,
+                   multiple = T,
+                   options = list(
+                     maxItems = 1,
+                     placeholder = 'Selecione uma coluna abaixo:'#,
+                     #    onInitialize = I('function() { this.setValue(""); }')
+                   ) # options
+    )# selectize
 
   })
   output$selec_vsc          <- renderUI({
@@ -360,31 +418,45 @@ shinyServer(function(input, output, session) {
 
   })
 
-  output$selec_area.parcela <- renderUI({
+  output$selec_est.vertical_2 <- renderUI({
 
     data <- rawData_()
 
-    selectizeInput("col.area.parcela",
-                   NULL, # nome que sera mostrado na UI
-                   choices = names(data),
-                   selected = area_parcela_names,
-                   multiple = T,
-                   options = list(
-                     maxItems = 1,
-                     placeholder = 'Selecione uma coluna abaixo:'#,
-                     #    onInitialize = I('function() { this.setValue(""); }')
-                   ) # options
-    )# selectize
+    switch(input$est.vert.calc,
+           "Definir" =   h5("A estrutura vertical será calculada utilizando a variável altura, segundo o método de Souza (2002)."),
+
+           "Inserir" =    selectizeInput("col.est.vertical",
+                                         NULL, # nome que sera mostrado na UI
+                                         choices = names(data),
+                                         # selected =  ,
+                                         multiple = T,
+                                         options = list(
+                                           maxItems = 1,
+                                           placeholder = 'Selecione uma coluna abaixo:'#,
+                                           #    onInitialize = I('function() { this.setValue(""); }')
+                                         ) # options
+           )
+    ) #switch
 
   })
-  output$selec_area.total   <- renderUI({
+  output$selec_est.vertical_warning <- renderUI({
+
+    req(input$est.vert.calc == "Definir" )
+    validate(
+      need(!is.null(input$col.ht) , # ht nao e nulo? quando a resposta for nao a mensagem aparece
+           "Variável 'Altura' não definida. A estrutura horizontal não será calculada." ), errorClass = "AVISO")
+
+
+
+  })
+  output$selec_est.interna  <- renderUI({
 
     data <- rawData_()
 
-    selectizeInput("col.area.total",
+    selectizeInput("col.est.interna",
                    NULL, # nome que sera mostrado na UI
                    choices = names(data),
-                   selected = area_total_names,
+                   # selected = ,
                    multiple = T,
                    options = list(
                      maxItems = 1,
@@ -402,41 +474,6 @@ shinyServer(function(input, output, session) {
                    NULL, # nome que sera mostrado na UI
                    choices = names(data),
                    selected = estratos_names,
-                   multiple = T,
-                   options = list(
-                     maxItems = 1,
-                     placeholder = 'Selecione uma coluna abaixo:'#,
-                     #    onInitialize = I('function() { this.setValue(""); }')
-                   ) # options
-    )# selectize
-
-  })
-
-  output$selec_est.vertical <- renderUI({
-
-    data <- rawData_()
-
-    selectizeInput("col.est.vertical",
-                   NULL, # nome que sera mostrado na UI
-                   choices = names(data),
-                  # selected =  ,
-                   multiple = T,
-                   options = list(
-                     maxItems = 1,
-                     placeholder = 'Selecione uma coluna abaixo:'#,
-                     #    onInitialize = I('function() { this.setValue(""); }')
-                   ) # options
-    )# selectize
-
-  })
-  output$selec_est.interna  <- renderUI({
-
-    data <- rawData_()
-
-    selectizeInput("col.est.interna",
-                   NULL, # nome que sera mostrado na UI
-                   choices = names(data),
-                   # selected = ,
                    multiple = T,
                    options = list(
                      maxItems = 1,
@@ -502,18 +539,25 @@ shinyServer(function(input, output, session) {
           data[,input$col.rm_data_var]))
     }
 
-    selectizeInput("level.rm_data_level",
-                   label = "Selecione o(s) nivel(s) que se deseja remover:",
-                   choices = opcoes,
-                   multiple = TRUE,
-                   options = list(
-                     placeholder = 'Selecione o(s) nivel(s) abaixo',
-                     onInitialize = I('function() { this.setValue(""); }')
-                   ) # options
+    list(
+
+      selectizeInput("level.rm_data_level",
+                     label = "Selecione o(s) nivel(s) que se deseja remover ou manter:",
+                     choices = opcoes,
+                     multiple = TRUE,
+                     options = list(
+                       placeholder = 'Selecione o(s) nivel(s) abaixo',
+                       onInitialize = I('function() { this.setValue(""); }')
+                     ) # options
+      ),
+
+      radioButtons("rm_or_keep",
+                   label = "Remover, ou manter dados referentes ao nível selecionado?",
+                   c("Remover"=FALSE, "Manter"=TRUE),
+                   selected = FALSE,
+                   inline = TRUE  )
+
     )
-
-
-
   })
   output$rm_vars <- renderUI({
 
@@ -540,7 +584,7 @@ shinyServer(function(input, output, session) {
 
     list(
 
-      h3("Área da parcela (numérico)"),
+      h3("Área da parcela (m²) (numérico)"),
 
 
       numericInput( # cria uma lista de opcoes em que o usuario pode clicar
@@ -559,7 +603,7 @@ shinyServer(function(input, output, session) {
     req(is.null(input$col.area.total) || input$col.area.total=="" )
 
     list(
-      h3("Área total (numérico)"),
+      h3("Área total (ha) (numérico)"),
 
       numericInput( # cria uma lista de opcoes em que o usuario pode clicar
         'num.area.total', # Id
@@ -643,24 +687,7 @@ shinyServer(function(input, output, session) {
     )
 
   })
-  # calcular estrutura vertical
-  output$checkbox_calc.est.vert <- renderUI({
 
-    # precisa que o usuario nao tenha selecionado estrutura vertical E tenha selecionado altura
-    req((is.null(input$col.est.vertical) || input$col.est.vertical=="") &&  (!is.null(input$col.ht) || input$col.ht!="")   )
-
-    list(
-
-    h3("Calcular Estrutura interna"),
-
-    h5("A estrutura interna será calculada utilizando a variável altura, segundo o método de Souza (2002)"),
-
-    radioButtons("est.vert.calc",
-                  "Deseja classificar a estrutura interna utilizando a variável altura?",
-                 c("Sim", "Nao"), "Nao" )
-    )
-
-  })
   # tabela
   # rawData sera o dado utilizado durante o resto do app
   # as alteracoes feitas em 'preparacao' serao salvas aqui
@@ -672,22 +699,36 @@ shinyServer(function(input, output, session) {
 
     # Antes de rodar as mensagens a seguir, um dado precisa ser importado
     validate(need(data,"please import a dataset"))
-    validate(check_numeric(nm$dap, data, "dap"))
+
+    # Check numeric para cap ou dap
+    if(!is.null(input$col.cap) && !is.na(input$col.cap) ){
+      validate(check_numeric(input$col.cap, data, "cap"))
+    }else{
+      validate(check_numeric(input$col.dap, data, "dap"))
+    }
+
+    # check numeric para ht
     validate(check_numeric(nm$ht, data, "ht"))
+
     # Aqui o dado nao ira rodar, caso essas condicoes sejam contrariadas
     # Elas serao mostradas em vermelho, devido a errorClass (definida no comeco da UI )
     #validate(
     #  need(is.numeric(data[[nm$dap]]), "dap column must be numeric"),
-     # need(is.numeric(data[[nm$ht]]), "ht column must be numeric"), errorClass = "WRONG")
+    # need(is.numeric(data[[nm$ht]]), "ht column must be numeric"), errorClass = "WRONG")
+
+    # O if a seguir sera para calcular o DAP, caso o usuario insira a coluna CAP
+    if(!is.null(input$col.cap) && !is.na(input$col.cap) ){
+      data$DAP <- data[[nm$cap]]/pi
+    }
 
 
-    # o primeiro if sera para remover as linhas
+    # o primeiro if sera para filtrar as linhas
 
     # se o usuario nao selecionar nada, retorna o dado normal
     # (isso faz com o que o dado original seja exibido logo que se entra na aba de filtrar),
     # caso contrario ele filtra o dado conforme o usuario seleciona as variaveis
 
-    if( is.null(input$col.rm_data_var) || input$col.rm_data_var ==""){
+    if( is.null(input$col.rm_data_var) || input$col.rm_data_var =="" || is.null(input$rm_or_keep) || input$rm_or_keep == ""){
 
       # esse if acima so foi feito dessa forma pois tentar adicionar ! nas condicoes acima
       # nao funcionou, por algum motivo.
@@ -696,12 +737,21 @@ shinyServer(function(input, output, session) {
 
     }else{
 
-      # remove linhas caso um nivel seja selecionado
-      data <- data[!data[[input$col.rm_data_var]] %in% input$level.rm_data_level,]
+
+
+      if(input$rm_or_keep){ # mantem se for verdadeiro
+        boolean_vec <- data[[input$col.rm_data_var]]     %in%   input$level.rm_data_level
+      }else{                # remove se for falso
+        boolean_vec <- data[[input$col.rm_data_var]]   %notin%  input$level.rm_data_level
+      }
+
+
+      data <- data[boolean_vec,]
 
       # data <- data %>% filter( ! .data[[input$col.rm_data_var]] %in% input$level.rm_data_level )
 
     }
+
 
     # A linha a seguir sera para remover uma ou mais colunas
 
@@ -711,8 +761,19 @@ shinyServer(function(input, output, session) {
 
     data[, input$col.rm_vars] <- NULL
 
+    if(input$zero_to_NA){
+
+      #ex1["HT"][ ex1["HT"] == 0 ] <- NA
+
+      # Converter zero em NA quando a variavel tiver o seu nome definido
+      if(nrow(data)>0){
+        if(nm$dap!=""){  data[nm$dap][ data[nm$dap] == 0 ] <- NA }
+        if(nm$ht!= ""){  data[nm$ht ][ data[nm$ht ] == 0 ] <- NA }
+      }
+    }
+
     # A seguir e feito o calculo do volume, caso o usuario nao insira uma variavel de volume e as variaveis necessarias para o calculo
-    if( is.null(input$modelo_estvol) ||  is.null(input$col.dap)  || is.null(input$b0_estvol) || is.null(input$b1_estvol) || is.na(input$modelo_estvol) ||  is.na(input$col.dap)  || is.na(input$b0_estvol) || is.na(input$b1_estvol) || input$modelo_estvol =="" || input$col.dap ==""  || input$b0_estvol == "" || input$b1_estvol == ""  ){
+    if( is.null(input$modelo_estvol) ||  is.null(nm$dap)  || is.null(input$b0_estvol) || is.null(input$b1_estvol) || is.na(input$modelo_estvol) ||  is.na(nm$dap)  || is.na(input$b0_estvol) || is.na(input$b1_estvol) || input$modelo_estvol =="" || nm$dap ==""  || input$b0_estvol == "" || input$b1_estvol == ""  ){
 
       # esse if acima so foi feito dessa forma pois tentar adicionar ! nas condicoes acima
       # nao funcionou, por algum motivo.
@@ -721,52 +782,54 @@ shinyServer(function(input, output, session) {
     }else{
 
       if(input$modelo_estvol == "LN(VFCC) = b0 + b1 * 1/DAP + e"){
-        data$VOL <- exp( input$b0_estvol + 1/data[[input$col.dap]] * input$b1_estvol )
+        data$VOL <- exp( input$b0_estvol + 1/data[[nm$dap]] * input$b1_estvol )
         data <- data %>% select(VOL, everything())
       }
 
       if(input$modelo_estvol == "VFCC = b0 + b1 * DAP + e"){
-        data$VOL <- input$b0_estvol + data[[input$col.dap]] * input$b1_estvol
+        data$VOL <- input$b0_estvol + data[[nm$dap]] * input$b1_estvol
         data <- data %>% select(VOL, everything())
       }
 
       if(input$modelo_estvol == "VFCC = b0 + b1 * DAP² + e"){
-        data$VOL <- input$b0_estvol + data[[input$col.dap]]^2 * input$b1_estvol
+        data$VOL <- input$b0_estvol + data[[nm$dap]]^2 * input$b1_estvol
         data <- data %>% select(VOL, everything())
       }
 
       if(input$modelo_estvol == "VFCC = b0 + b1 * DAP + b2 * DAP² + e"){
-        data$VOL <- input$b0_estvol + data[[input$col.dap]] * input$b1_estvol + data[[input$col.dap]]^2 * input$b2_estvol
+        data$VOL <- input$b0_estvol + data[[nm$dap]] * input$b1_estvol + data[[nm$dap]]^2 * input$b2_estvol
         data <- data %>% select(VOL, everything())
       }
 
       if(input$modelo_estvol == "VFCC = b0 + b1 * LN(DAP) + e"){
-        data$VOL <- input$b0_estvol + log(data[[input$col.dap]]) * input$b1_estvol
+        data$VOL <- input$b0_estvol + log(data[[nm$dap]]) * input$b1_estvol
         data <- data %>% select(VOL, everything())
 
       }
 
+      suppressWarnings(
+        # modelos com b2 e ht precisam de mais uma condicao
+        if( is.null(input$modelo_estvol) ||  is.null(input$col.ht)  |  is.na(input$col.ht) || is.na(input$b2_estvol) || input$col.ht ==""  || input$b2_estvol == "" ){
 
-      # modelos com b2 e ht precisam de mais uma condicao
-      if( is.null(input$modelo_estvol) ||  is.null(input$col.ht)  |  is.na(input$col.ht) || is.na(input$b2_estvol) || input$col.ht ==""  || input$b2_estvol == "" ){
+        }else if(input$modelo_estvol == "LN(VFCC) = b0 + b1 * LN(DAP) + b2 * LN(HT) + e"){
+          data$VOL <- exp( input$b0_estvol + log(data[[nm$dap]]) * input$b1_estvol + log(data[[input$col.ht]]) * input$b2_estvol )
+          data <- data %>% select(VOL, everything())
 
-      }else if(input$modelo_estvol == "LN(VFCC) = b0 + b1 * LN(DAP) + b2 * LN(HT) + e"){
-        data$VOL <- exp( input$b0_estvol + log(data[[input$col.dap]]) * input$b1_estvol + log(data[[input$col.ht]]) * input$b2_estvol )
-        data <- data %>% select(VOL, everything())
+        }else  if(input$modelo_estvol == "VFCC = b0 + b1 * DAP + b2 * HT + e"){
+          data$VOL <- input$b0_estvol + data[[nm$dap]] * input$b1_estvol + data[[input$col.ht]] * input$b2_estvol
+          data <- data %>% select(VOL, everything())
+        }else if(input$modelo_estvol == "VFCC = b0 * DAP^b1 * HT^b2 + e"){
+          data$VOL <- input$b0_estvol * data[[nm$dap]] ^ input$b1_estvol * data[[input$col.ht]] ^ input$b2_estvol
+          data <- data %>% select(VOL, everything())
+        }
+      )
 
-      }else  if(input$modelo_estvol == "VFCC = b0 + b1 * DAP + b2 * HT + e"){
-        data$VOL <- input$b0_estvol + data[[input$col.dap]] * input$b1_estvol + data[[input$col.ht]] * input$b2_estvol
-        data <- data %>% select(VOL, everything())
-      }else if(input$modelo_estvol == "VFCC = b0 * DAP^b1 * HT^b2 + e"){
-        data$VOL <- input$b0_estvol * data[[input$col.dap]] ^ input$b1_estvol * data[[input$col.ht]] ^ input$b2_estvol
-        data <- data %>% select(VOL, everything())
-      }
-
-
+      #transformar zeros do volume em NA
+      if(is.null(data$VOL)){}else{data$VOL <- na_if(data$VOL, 0) }
     }
 
     # A seguir e feito o calculo da estrutura vertical, caso o usuario nao tenha inserido uma variavel referente a mesma, e selecione que desja calcular
-    if(!is.null(input$est.vert.calc) && !is.na(input$est.vert.calc) && input$est.vert.calc=="Sim"){
+    if(!is.null(input$est.vert.calc) && !is.na(input$est.vert.calc) && input$est.vert.calc=="Definir" && !is.null(input$col.ht) && !is.na(input$col.ht) ){
 
       data <- estrat_vert_souza(data, input$col.ht)
 
@@ -795,16 +858,17 @@ shinyServer(function(input, output, session) {
       data <- data[ -insconsist_rows ,  ]
     }
 
+    data <- as.data.frame(data)
 
     data
 
   })
- # render
+  # render
   output$prep_table <- DT::renderDataTable({
 
     validate(need(rawData(), "Please import a dataset"))
 
-    data <- round_df(rawData(), 4)
+    data <- round_df(suppressWarnings(rawData()), 7)
 
 
     datatable(data,
@@ -825,7 +889,14 @@ shinyServer(function(input, output, session) {
 
     # Essa parte do server ira gerar uma UI vazia, que gera avisos caso alguma condicao abaixo seja violada.
     #
-    # Os erros so poderao ser mostrados se o usuario selecionar alguma coluna para ser removido
+
+    #Avisa quando o usuário remove todas as linhas do dado
+    validate(
+      need(nrow(rawData())>0,
+           "Base de dados vazia"),
+      errorClass = "AVISO"
+    )
+    # Os erros abaixo so poderao ser mostrados se o usuario selecionar alguma coluna para ser removido
     req(input$col.rm_vars)
 
     # A seguir sao geradas uma mensagem de aviso para cada uma das variaveis que o usuario pode selecionar na aba
@@ -844,8 +915,6 @@ shinyServer(function(input, output, session) {
            "You just removed the 'ht' variable. This will prevent you from running some of the app's functions") ,
       need(! nm$vcc %in% input$col.rm_vars,
            "You just removed the 'vcc' variable. This will prevent you from running some of the app's functions") ,
-      need(! nm$vsc %in% input$col.rm_vars,
-           "You just removed the 'vsc' variable. This will prevent you from running some of the app's functions") ,
       need(! nm$area.parcela %in% input$col.rm_vars,
            "You just removed the 'area.parcela' variable. This will prevent you from running some of the app's functions"),
       need(! nm$area.total %in% input$col.rm_vars,
@@ -863,35 +932,50 @@ shinyServer(function(input, output, session) {
   # Set names ####
   varnames <- reactive({
 
-    #req(input$col.especies,input$col.parcelas, input$col.dap,input$col.ht,input$col.vcc, input$col.vsc,input$col.area.parcela,input$col.area.total, input$col.col.estrato,  input$col.est.vertical,input$col.est.interna)
-
     varnameslist <- list(
-      especies=input$col.especies,
+
+      arvore = input$col.arvore,
       parcelas=input$col.parcelas,
+      especies=input$col.especies,
+
+      cap = input$col.cap,
       dap=input$col.dap,
       ht=input$col.ht,
+
       vcc=input$col.vcc,
-      vsc=input$col.vsc,
+      # vsc=input$col.vsc,
       area.parcela=input$col.area.parcela,
       area.total=input$col.area.total,
-      estrato=input$col.estrato,
+
       est.vertical=input$col.est.vertical,
       est.interna=input$col.est.interna,
+      estrato=input$col.estrato,
+
       NI=input$rotutuloNI,
       IC=input$int.classe,
       diam.min=input$diam.min
-      )
+    )
 
+    # Se o usuario inserir valores numericos para as areas, defini-las na lista
     if(is.null(input$num.area.parcela)|| is.na(input$num.area.parcela) ||input$num.area.parcela==""){}else{varnameslist$area.parcela <- input$num.area.parcela  }
     if(is.null(input$num.area.total) || is.na(input$num.area.total) ||input$num.area.total==""){}else{varnameslist$area.total <- input$num.area.total  }
 
+    # Se o usuario inserir valores de coeficientes, definir o nome de vcc como VOL,
+    # pois este sera calculado na aba preparacao
     if( !is.null(input$b0_estvol) && !is.na(input$b0_estvol) && !is.null(input$b1_estvol) && !is.na(input$b1_estvol)  ){
       varnameslist$vcc <- "VOL"
-      }
-
-    if(!is.null(input$est.vert.calc) && !is.na(input$est.vert.calc) && input$est.vert.calc=="Sim"){
+    }
+    # se est vertical nao for nulo, altura nao for nula e o usuario quiser definir a est vertical, alterar o nome para est.vert
+    # pois esta sera definida na aba preparacao
+    if(!is.null(input$est.vert.calc) && !is.na(input$est.vert.calc) && input$est.vert.calc=="Definir" && !is.null(input$col.ht) && !is.na(input$col.ht) ){
       varnameslist$est.vertical <- "est.vert"
-      }
+    }
+
+    # se cao for selecionado, definir o nome de DAP para DAP, pois este sera calculado
+    # na preparacao
+    if(!is.null(input$col.cap) && !is.na(input$col.cap) ){
+      varnameslist$dap <- "DAP"
+    }
 
 
     # Os nomes nao selecionados serao salvos como NULL na lista,
@@ -914,14 +998,31 @@ shinyServer(function(input, output, session) {
 
     # Aqui a funcao nao ira rodar, caso essas condicoes sejam contrariadas
     #  req(data, is.numeric(data[[input$col.dap]]),is.numeric(data[[input$col.ht]]) )
+
+    # Check numeric para cap ou dap
+    if(!is.null(input$col.cap) && !is.na(input$col.cap) ){
+      req(input$col.cap)
+      validate(check_numeric(input$col.cap, data, "cap"))
+    }else{
+      req(input$col.dap)
+
+      validate(check_numeric(input$col.dap, data, "dap"))
+    }
+
     validate(
-      need(input$col.dap,""),
-      need(input$col.ht,""),
-      check_numeric(input$col.dap, data, "dap"),
       check_numeric(input$col.ht, data, "ht")  )
 
     #htdapratio(data, dap = input$col.dap, ht = input$col.ht)
-    consistency(data, dap = input$col.dap, ht = input$col.ht, parcela = input$col.parcelas)
+    suppressWarnings(
+      consistency(
+        df = data,
+        cap = input$col.cap,
+        dap = input$col.dap ,
+        ht = input$col.ht,
+        parcela = input$col.parcelas,
+        especie = input$col.especies,
+        arvore = input$col.arvore
+      ))
   })
   output$consist_warning1 <- renderUI({
     # Essa aviso ira aparcer na UI caso consit_fun() nao seja nulo.
@@ -979,7 +1080,7 @@ shinyServer(function(input, output, session) {
     datatable(consist_data,
 
               options = list(
-   #             width = "200px",
+                #             width = "200px",
                 initComplete = JS(
                   "function(settings, json) {",
                   "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
@@ -991,34 +1092,94 @@ shinyServer(function(input, output, session) {
 
   })
 
-  # Índices de diversidade ####
 
-  # funcao diversidade
-  tabdiversidade <- reactive({
+  # tot arvore ####
+
+  tot_arvoreData <- reactive({
+
 
     nm <- varnames()
     dados <- rawData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df == "Dados em nivel de fuste", "Base de dados incompativel" ),
+      need(nm$arvore,"Por favor mapeie a coluna referente a 'Árvore'  "),
+      need(nm$dap,"Por favor mapeie a coluna referente a 'CAP' ou 'DAP'  ") )
+    arv_summary(
+      df = dados,
+      arvore = nm$arvore,
+      dap = nm$dap,
+      ht = nm$ht,
+      vol = nm$vcc,
+      .groups = c(nm$estrato, nm$parcelas, nm$especies, nm$est.vertical,nm$est.interna),
+      area_parcela = nm$area.parcela,
+      area_total = nm$area.total )
+
+
+  })
+
+  output$tot_fuste_tab <- DT::renderDataTable({
+
+    tab <- round_df(tot_arvoreData() , 4)
+
+    datatable( tab,
+               options = list(searching = FALSE,
+                              paging=TRUE,
+                              ordering=TRUE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+               )
+    )
+
+  })
+
+  arvData <- reactive({
+
+    #if(is.null(input$df)){ return()}
+    req(input$df)
+
+    # Se o dado for em nivel de arvore, a totalização de parcelas deve ser feita para que
+    # NewData possa ser inserido em acs. Sem essa condição a ui gera mensagens de erro
+    switch(input$df,
+           "Dados em nivel de fuste" = if(is.null(tot_arvoreData()) ){return()}else{ tot_arvoreData()},
+           "Dados em nivel de arvore" = rawData() )
+
+
+  })
+
+  # Índices de diversidade ####
+
+  # funcao diversidade
+  tabdiversidade <- reactive({
+
+    nm <- varnames()
+    dados <- arvData()
+
+    validate(
+      need(dados, "Por favor faça o upload da base de dados"),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  ") )
 
     # Se o usuario nao quiser realizar a anlise por parcela, o elemento parcelas da lista sera nulo,
     # mesmo que o usuario tenha mapeado a variavel parcela na aba de mapeamento.
-     if(input$rb_div=="Nao"){nm$parcelas=NULL}
+    if(input$rb_div=="Nao"){nm$parcelas=NULL}
 
-      x <- diversidade(data             = dados,
-                       col.especies     = nm$especies,
-                       col.parcelas     = nm$parcelas,
-                       rotulo.NI        = nm$NI  ) # %>%
-      #gather("Índice", "Resultado") # transpor tabela
-      x
+    x <- diversidade(data             = dados,
+                     col.especies     = nm$especies,
+                     col.parcelas     = nm$parcelas,
+                     rotulo.NI        = nm$NI  ) # %>%
+    #gather("Índice", "Resultado") # transpor tabela
+    x
 
   })
 
   # tabela diversidade
-  output$div <- renderDataTable({
+  output$div <- DT::renderDataTable({
 
     divdt <- tabdiversidade()
 
@@ -1039,11 +1200,11 @@ shinyServer(function(input, output, session) {
   tabmsimilaridade <- reactive({
 
     nm <- varnames()
-    dados <- rawData()
-
+    dados <- arvData()
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  ") )
 
@@ -1061,47 +1222,47 @@ shinyServer(function(input, output, session) {
   output$msim1 <- DT::renderDataTable({
 
 
-      x <- tabmsimilaridade()
-      x <- as.data.frame(x[[1]])
-      names(x) <- 1:length(x)
+    x <- tabmsimilaridade()
+    x <- as.data.frame(x[[1]])
+    names(x) <- 1:length(x)
 
 
-      msimdt1 <- tibble::rownames_to_column(x, " ")
+    msimdt1 <- tibble::rownames_to_column(x, " ")
 
-      datatable( msimdt1,
-                 rownames = F,
-                 options = list(searching = FALSE,
-                                paging=FALSE,
-                                ordering=FALSE,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                  "}")
-                 )
-      ) %>%
-        formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
+    datatable( msimdt1,
+               rownames = F,
+               options = list(searching = FALSE,
+                              paging=FALSE,
+                              ordering=FALSE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+               )
+    ) %>%
+      formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
 
   })
   output$msim2 <- DT::renderDataTable({
 
-      x <- tabmsimilaridade()
-      x <- as.data.frame(x[[2]])
-      names(x) <- 1:length(x)
+    x <- tabmsimilaridade()
+    x <- as.data.frame(x[[2]])
+    names(x) <- 1:length(x)
 
-      msimdt2 <- tibble::rownames_to_column(x, " ")
+    msimdt2 <- tibble::rownames_to_column(x, " ")
 
-      datatable( msimdt2,
-                 rownames = F,
-                 options = list(searching = FALSE,
-                                paging=FALSE,
-                                ordering=FALSE,
-                                initComplete = JS(
-                                  "function(settings, json) {",
-                                  "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                  "}")
-                 )
-      ) %>%
-        formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
+    datatable( msimdt2,
+               rownames = F,
+               options = list(searching = FALSE,
+                              paging=FALSE,
+                              ordering=FALSE,
+                              initComplete = JS(
+                                "function(settings, json) {",
+                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
+                                "}")
+               )
+    ) %>%
+      formatStyle(1, backgroundColor = "#00a90a", color = '#fff' )
 
   })
 
@@ -1110,24 +1271,24 @@ shinyServer(function(input, output, session) {
 
     # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
     req(input$mainPanel_Indices %in% c("id_msim1_graph", "id_msim2_graph") ||  input$graph_d %in% c("Dendrograma - Jaccard","Dendrograma - Sorensen") )
-      radioButtons("rb_msim_graph",
-                   "Selecione o método de classificação:",
-                   c("Vizinho mais próximo"  = "single",
-                     "Vizinho mais distante" = "complete",
-                     "Distância euclidiana"  = "average"),
-                   selected = "complete", inline = T)
-      })
+    radioButtons("rb_msim_graph",
+                 "Selecione o método de classificação:",
+                 c("Vizinho mais próximo"  = "single",
+                   "Vizinho mais distante" = "complete",
+                   "Distância euclidiana"  = "average"),
+                 selected = "complete", inline = T)
+  })
   output$slider_graphmsim <- renderUI({
 
     # precisa que o grafico seja selecionado na ui, caso contrario nao mostra nada
     req(input$mainPanel_Indices %in% c("id_msim1_graph", "id_msim2_graph") ||  input$graph_d %in% c("Dendrograma - Jaccard","Dendrograma - Sorensen") )
 
-       sliderInput("slider_msim_graph",
-                  label = "Selecione o número de clusters:",
-                  min = 1,
-                  max = 10,
-                  value = 3,
-                  step = 1)
+    sliderInput("slider_msim_graph",
+                label = "Selecione o número de clusters:",
+                min = 1,
+                max = 10,
+                value = 3,
+                step = 1)
 
   })
 
@@ -1140,32 +1301,32 @@ shinyServer(function(input, output, session) {
     req(input$rb_msim_graph,input$slider_msim_graph )
 
     nm <- varnames()
-    dados <- rawData()
+    dados <- arvData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  ") )
 
-      df <- as.data.frame(tabmsimilaridade()[[1]] )
+    df <- as.data.frame(tabmsimilaridade()[[1]] )
 
-      rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
+    rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
 
-      hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
-      dendr <- ggdendro::dendro_data(hc) # convert for ggplot
-      clust    <- cutree(hc,k=input$slider_msim_graph)                    # find 2 clusters
-      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
+    hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
+    dendr <- ggdendro::dendro_data(hc) # convert for ggplot
+    clust    <- cutree(hc,k=input$slider_msim_graph)                    # find 2 clusters
+    clust.df <- data.frame(label=names(clust), cluster=factor(clust))
 
-      # dendr[["labels"]] has the labels, merge with clust.df based on label column
-      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
-      # plot the dendrogram; note use of color=cluster in geom_text(...)
+    # dendr[["labels"]] has the labels, merge with clust.df based on label column
+    dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+    # plot the dendrogram; note use of color=cluster in geom_text(...)
 
-      x <- ggdendro::ggdendrogram(dendr) +
-        geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
-        ggdendro::theme_dendro()
+    x <- ggdendro::ggdendrogram(dendr) +
+      geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+      ggdendro::theme_dendro()
 
-      x
+    x
 
   })
   output$msim1_graph_ <- renderPlot({
@@ -1184,11 +1345,11 @@ shinyServer(function(input, output, session) {
     req(input$rb_msim_graph,input$slider_msim_graph )
 
     nm <- varnames()
-    dados <- rawData()
+    dados <- arvData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  ") )
 
@@ -1196,20 +1357,20 @@ shinyServer(function(input, output, session) {
 
     rownames(df) <- levels( as.factor( dados[,nm$parcelas] ) )
 
-      hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
-      dendr <- ggdendro::dendro_data(hc) # convert for ggplot
-      clust    <- cutree(hc,k=input$slider_msim_graph)
-      clust.df <- data.frame(label=names(clust), cluster=factor(clust))
+    hc    <- hclust(dist(df), input$rb_msim_graph) # heirarchal clustering
+    dendr <- ggdendro::dendro_data(hc) # convert for ggplot
+    clust    <- cutree(hc,k=input$slider_msim_graph)
+    clust.df <- data.frame(label=names(clust), cluster=factor(clust))
 
-      # dendr[["labels"]] has the labels, merge with clust.df based on label column
-      dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
-      # plot the dendrogram; note use of color=cluster in geom_text(...)
+    # dendr[["labels"]] has the labels, merge with clust.df based on label column
+    dendr[["labels"]] <- merge(dendr[["labels"]],clust.df, by="label")
+    # plot the dendrogram; note use of color=cluster in geom_text(...)
 
-      x <- ggdendro::ggdendrogram(dendr) +
-        geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
-        ggdendro::theme_dendro()
+    x <- ggdendro::ggdendrogram(dendr) +
+      geom_text(data=ggdendro::label(dendr), aes(x, y, label=label, hjust=.5,color=cluster), size=4) +
+      ggdendro::theme_dendro()
 
-      x
+    x
 
 
   })
@@ -1228,11 +1389,12 @@ shinyServer(function(input, output, session) {
   tabagregate <- reactive({
 
     nm <- varnames()
-    dados <- rawData()
+    dados <- arvData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor mapeie a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcela'  ") )
 
@@ -1265,18 +1427,19 @@ shinyServer(function(input, output, session) {
   # funcao estrutura
   tabestrutura <- reactive({
 
-    dados <- rawData()
+    dados <- arvData()
     nm <- varnames()
 
     validate(
-      need(rawData(), "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(dados, "Por favor faça o upload da base de dados"),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$especies,"Por favor selecione a coluna referente a 'especies'  "),
       need(nm$parcelas,"Por favor selecione a coluna referente a 'parcelas'  "),
-      need(nm$dap,"Por favor selecione a coluna referente a 'especies'  "),
-      need(nm$area.parcela,"Por favor selecione a coluna referente a 'especies'  ")
+      need(nm$dap,"Por favor selecione a coluna referente a 'dap'  "),
+      need(nm$area.parcela,"Por favor selecione a coluna referente a 'area da parcela'  ")
 
-      )
+    )
 
     x <- estrutura(data             = dados,
                    col.especies     = nm$especies,
@@ -1295,7 +1458,7 @@ shinyServer(function(input, output, session) {
   output$estr <- renderDataTable({
 
     estrdt <- round_df( tabestrutura(), 4 )
-   # estrdt <- tabestrutura()
+    # estrdt <- tabestrutura()
 
     datatable( as.tbl(estrdt),
                options = list(searching = T,
@@ -1309,15 +1472,46 @@ shinyServer(function(input, output, session) {
   })
 
   # grafico estrutura (IVI)
+  output$ivi_graph_opts <- renderUI({
+
+    #req(input$mainPanel_Estrutural=="Gráfico IVI")
+
+    dados <- rawData()
+    nm <- varnames()
+
+    n_max <- nlevels(as.factor(dados[[nm$especies]]))
+
+
+    list(
+      column(width=3,
+             h3("Configuração do gráfico IVI:")
+      ),
+      column(3,
+             numericInput("n_IVI_g", h4("Número de espécies no eixo y:"),10,1,n_max,1) ),
+
+      column(3,
+             radioButtons("g_ivi_bw",
+                          "Gráfico em tons de cinza?",
+                          c("Sim"=T,"Nao"=F),
+                          selected = F,
+                          inline = T))
+
+    )
+
+
+  })
   ivi_graph <- reactive({
 
-
     validate(
+      need(input$n_IVI_g, ""),
+      # need(input$g_ivi_bw, ""),
       need(tabestrutura(), "Por favor faça a análise estrutural")  )
 
-        tabestrutura() %>%
+    g <- tabestrutura() %>%
       arrange(-IVI) %>%
-      mutate(n = as.numeric(row.names(.)), class = ifelse(n>input$n_IVI_g,"Demais especies",as.character(especie)),class = factor(class, levels=unique(class)) )%>%
+      mutate(n = as.numeric(row.names(.)),
+             class = ifelse(n>input$n_IVI_g,"Demais especies",as.character(especie)),
+             class = factor(class, levels=unique(class)) ) %>%
       gather(IVI_contrib, valor, FR , DR , DoR, factor_key = T) %>%
       group_by(class, IVI_contrib) %>%
       summarise(valor_d = sum(valor), IVI = sum(IVI), IVI_sep = valor_d/3,IVI_contrib_porc = round(valor_d/3/IVI,2)) %>%
@@ -1336,16 +1530,59 @@ shinyServer(function(input, output, session) {
         panel.border = element_blank(),
         axis.title   = element_text(size = 26,face="bold"),
         axis.text    = element_text(size = 22),
-        axis.text.y = element_text(size = 22, face = "italic"),
         axis.line.x = element_line(color="black"),
         axis.line.y = element_line(color="black"),
         strip.text.x = element_text(size = 22)   ) +
       guides(fill = guide_legend(reverse=T))
 
+    if(input$g_ivi_bw){g <- g + ggplot2::scale_fill_grey(start = 0.8, end = 0.2) }
+
+    g
   })
   output$estrg <- renderPlot({
 
     ivi_graph()
+
+  })
+
+  # grafico estrutura vertical
+
+  est.vert_graph <- reactive({
+
+    dados <- arvData()
+    nm <- varnames()
+
+    validate(
+      need(dados, "Por favor faça a análise estrutural"),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(nm$est.vertical, "Por favor defina a estrutura vertical")  )
+
+    dados %>%
+      rename(xvar = !!rlang::sym(nm$est.vertical)  ) %>%
+      ggplot(aes(x=as.factor(xvar) ) ) +
+      geom_bar(stat="count", color = "black") +
+      labs(x = "Estrutura vertical", y="Número de indivíduos") +
+      ggthemes::theme_igray(base_family = "serif") +
+      theme(
+        legend.position = "bottom",
+        legend.text = element_text(size = 18),
+        legend.title = element_text(size=22, face="bold"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.title   = element_text(size = 26,face="bold"),
+        axis.text    = element_text(size = 22),
+        axis.line.x = element_line(color="black"),
+        axis.line.y = element_line(color="black"),
+        strip.text.x = element_text(size = 22)   ) +
+      guides(fill = guide_legend(reverse=T))
+
+
+
+  })
+  output$est.vert_plot <- renderPlot({
+
+    est.vert_graph()
 
   })
 
@@ -1358,7 +1595,8 @@ shinyServer(function(input, output, session) {
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$dap,"Por favor mapeie a coluna referente a 'dap'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  "),
       need(nm$area.parcela,"Por favor mapeie a coluna ou insira um valor referente a 'area.parcela'  ") )
@@ -1372,54 +1610,64 @@ shinyServer(function(input, output, session) {
                                            dapmin = nm$diam.min,
                                            especies = NA,
                                            volume = nm$vcc,
-                                           rotulo.NI = nm$NI )
+                                           rotulo.NI = nm$NI,
+                                           keep_unused_classes = TRUE
+    )
 
     lista[["dd_especie"]] <- classe_diametro(df = dados,
-                                           dap = nm$dap,
-                                           parcela = nm$parcelas,
-                                           area_parcela = nm$area.parcela,
-                                           ic = nm$IC,
-                                           dapmin = nm$diam.min,
-                                           especies = nm$especies,
-                                           volume = nm$vcc,
-                                           rotulo.NI = nm$NI )
-
-    lista[["dd_especie_indv_cc_column"]] <- classe_diametro(df = dados,
                                              dap = nm$dap,
                                              parcela = nm$parcelas,
                                              area_parcela = nm$area.parcela,
                                              ic = nm$IC,
                                              dapmin = nm$diam.min,
                                              especies = nm$especies,
-                                             volume = NA,
+                                             volume = nm$vcc,
                                              rotulo.NI = nm$NI,
-                                             cc_to_column = T,
-                                             cctc_ha = T )
+                                             keep_unused_classes = TRUE
+    )
+
+    lista[["dd_especie_indv_cc_column"]] <- classe_diametro(df = dados,
+                                                            dap = nm$dap,
+                                                            parcela = nm$parcelas,
+                                                            area_parcela = nm$area.parcela,
+                                                            ic = nm$IC,
+                                                            dapmin = nm$diam.min,
+                                                            especies = nm$especies,
+                                                            volume = NA,
+                                                            rotulo.NI = nm$NI,
+                                                            cc_to_column = T,
+                                                            cctc_ha = T,
+                                                            keep_unused_classes = TRUE
+    )
 
     lista[["dd_especie_vol_cc_column"]] <- classe_diametro(df = dados,
-                                                      dap = nm$dap,
-                                                      parcela = nm$parcelas,
-                                                      area_parcela = nm$area.parcela,
-                                                      ic = nm$IC,
-                                                      dapmin = nm$diam.min,
-                                                      especies = nm$especies,
-                                                      volume = nm$vcc,
-                                                      rotulo.NI = nm$NI,
-                                                      cc_to_column = T,
-                                                      cctc_ha = T )
-
-    lista[["dd_especie_G_cc_column"]] <- classe_diametro(df = dados,
                                                            dap = nm$dap,
                                                            parcela = nm$parcelas,
                                                            area_parcela = nm$area.parcela,
                                                            ic = nm$IC,
                                                            dapmin = nm$diam.min,
                                                            especies = nm$especies,
-                                                           volume = NA,
+                                                           volume = nm$vcc,
                                                            rotulo.NI = nm$NI,
                                                            cc_to_column = T,
-                                                           G_to_cc = T,
-                                                           cctc_ha = T )
+                                                           cctc_ha = T,
+                                                           keep_unused_classes = TRUE
+    )
+
+    lista[["dd_especie_G_cc_column"]] <- classe_diametro(df = dados,
+                                                         dap = nm$dap,
+                                                         parcela = nm$parcelas,
+                                                         area_parcela = nm$area.parcela,
+                                                         ic = nm$IC,
+                                                         dapmin = nm$diam.min,
+                                                         especies = nm$especies,
+                                                         volume = NA,
+                                                         rotulo.NI = nm$NI,
+                                                         cc_to_column = T,
+                                                         G_to_cc = T,
+                                                         cctc_ha = T,
+                                                         keep_unused_classes = TRUE
+    )
 
     lista
   })
@@ -1438,7 +1686,7 @@ shinyServer(function(input, output, session) {
                                 "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
                                 "}")
                )
-             )
+    )
 
 
   })
@@ -1461,6 +1709,8 @@ shinyServer(function(input, output, session) {
 
   })
   output$dd_vol_especie_tab <- DT::renderDataTable({
+    nm <- varnames()
+    validate(need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "))
 
     g <- round_df(dd_list()[["dd_especie_vol_cc_column"]], 2)
 
@@ -1504,17 +1754,16 @@ shinyServer(function(input, output, session) {
 
     ggplot(g, aes(as.factor(CC),IndvHA)) +
       geom_bar(stat = "identity",color="black")+
-   #   scale_y_continuous( expand=c(0,15) ) +
+      #   scale_y_continuous( expand=c(0,15) ) +
       ggthemes::theme_igray(base_family = "serif") +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Nº de Individuos por hectare") +
-      geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
+      geom_text(aes(label = round(IndvHA,1) ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
       theme(
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         axis.title   = element_text(size = 26,face="bold"),
         axis.text    = element_text(size = 22),
-        axis.text.x = element_blank(),
         axis.line.x = element_line(color="black"),
         axis.line.y = element_line(color="black"),
         strip.text.x = element_text(size = 22)   )
@@ -1529,21 +1778,23 @@ shinyServer(function(input, output, session) {
   })
   dd_g2 <- reactive({
 
+    nm <- varnames()
+    validate(need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "))
+
     g <- dd_list()[["dd_geral"]]
 
     ggplot(g, aes(as.factor(CC),volume_ha)) +
       geom_bar(stat = "identity",color="black")+
-    #  scale_y_continuous( expand=c(0,15) ) +
+      #  scale_y_continuous( expand=c(0,15) ) +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Volume por hectare") +
       ggthemes::theme_igray(base_family = "serif") +
-      geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
+      geom_text(aes(label = round(volume_ha,1) ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
       theme(
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         axis.title   = element_text(size = 26,face="bold"),
         axis.text    = element_text(size = 22),
-        axis.text.x = element_blank(),
         axis.line.x = element_line(color="black"),
         axis.line.y = element_line(color="black"),
         strip.text.x = element_text(size = 22)   )
@@ -1560,17 +1811,16 @@ shinyServer(function(input, output, session) {
 
     ggplot(g, aes(as.factor(CC),G_ha)) +
       geom_bar(stat = "identity",color="black")+
-     # scale_y_continuous( expand=c(0,15) ) +
+      # scale_y_continuous( expand=c(0,15) ) +
       labs(x = "Centro de Classe de Diâmetro - CCD (cm)", y = "Área Basal (G) por hectare") +
       ggthemes::theme_igray(base_family = "serif") +
-      geom_text(aes(label = CC ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
+      geom_text(aes(label = round(G_ha,1) ), position = position_dodge(0.9), vjust = -0.3, size = 6 ) +
       theme(
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         axis.title   = element_text(size = 26,face="bold"),
         axis.text    = element_text(size = 22),
-        axis.text.x = element_blank(),
         axis.line.x = element_line(color="black"),
         axis.line.y = element_line(color="black"),
         strip.text.x = element_text(size = 22)   )
@@ -1587,11 +1837,12 @@ shinyServer(function(input, output, session) {
   # Tabelas BDq
   BDq_list <- reactive({
     nm <- varnames()
-    dados <- rawData()
+    dados <- arvData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$dap,"Por favor mapeie a coluna referente a 'dap'  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  "),
       need(nm$area.parcela,"Por favor mapeie a coluna ou insira um valor referente a 'area.parcela'  ") )
@@ -1659,10 +1910,11 @@ shinyServer(function(input, output, session) {
       mutate(classe_de_diametro = as.factor(classe_de_diametro) )
 
     g <-  ggplot(graph_bdq, aes(x = classe_de_diametro, y = num_indv_ha) ) +
-      geom_bar(aes(fill = class), stat = "identity",position = "dodge") +
+      geom_bar(aes(fill = class), stat = "identity",position = "dodge", color='black') +
       labs(x = "Classe de diâmetro (cm)", y = "Número de indivíduos (ha)", fill = NULL) +
       scale_fill_manual(values =c("#108e00", "cyan3","firebrick2") ) +
       ggthemes::theme_igray(base_family = "serif") +
+      geom_text(aes(label = round(num_indv_ha,1), group=class ), position = position_dodge(width = 1), vjust = -0.3, size = 6 ) +
       theme(
         legend.position="bottom",
         legend.text = element_text(size = 20),
@@ -1692,14 +1944,15 @@ shinyServer(function(input, output, session) {
 
   # totalizacao de parcelas ####
 
-  totData <- reactive({
+  tot_parcData <- reactive({
 
     nm <- varnames()
-    dados <- rawData()
+    dados <- arvData()
 
     validate(
       need(dados, "Por favor faça o upload da base de dados"),
-      need(input$df == "Dados em nivel de arvore", "Base de dados incompativel" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
+      need(input$df != "Dados em nivel de parcela", "Base de dados incompativel" ),
       need(nm$dap,"Por favor mapeie a coluna referente a 'dap'  "),
       need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "),
       need(nm$parcelas,"Por favor mapeie a coluna referente a 'parcelas'  "),
@@ -1718,23 +1971,21 @@ shinyServer(function(input, output, session) {
                      groups       = grupos,
                      area_total   = nm$area.total,
                      idade        = NA,
-                     VSC          = nm$vsc,
+                     VSC          = NA,
                      Hd           = NA)
-
-
 
     names(x)[names(x)=="AREA_TOTAL"] <- nm$area.total
     names(x)[names(x)=="AREA_PARCELA"] <- nm$area.parcela
     names(x)[names(x)=="DAP"] <- nm$dap
     names(x)[names(x)=="HT"] <- nm$ht
-    names(x)[names(x)=="VCC"] <- nm$vcc
-    names(x)[names(x)=="VSC"] <- nm$vsc
+
+
     x
 
   })
   output$tot_parc_tab <- renderDataTable({ # renderizamos uma DT::DataTable
 
-    data <- totData()
+    data <- tot_parcData()
 
     datatable(data,
               options = list(initComplete = JS(
@@ -1756,12 +2007,37 @@ shinyServer(function(input, output, session) {
     # Se o dado for em nivel de arvore, a totalização de parcelas deve ser feita para que
     # NewData possa ser inserido em acs. Sem essa condição a ui gera mensagens de erro
     switch(input$df,
-           "Dados em nivel de arvore" = if(is.null(totData()) ){return()}else{ totData()},
+           "Dados em nivel de fuste" = if(is.null(tot_parcData()) ){return()}else{ tot_parcData()},
+           "Dados em nivel de arvore" = if(is.null(tot_parcData()) ){return()}else{ tot_parcData()},
            "Dados em nivel de parcela" = rawData() )
 
   })
 
   # amostragem casual simples ####
+
+  # UI para rodar acs por estrato
+  output$acs_estrato_rb <- renderUI({
+
+    req(input$tabset_inv=="Amostragem casual simples")
+
+    radioButtons("acs_estrato",
+                 "Calcular uma amostragem casual simples para cada estrato?",
+                 choices = c("Sim"=T,"Nao"=F),
+                 selected = F,
+                 inline = T)
+
+  })
+  output$acs_as_warning <- renderUI({
+
+    req(any( c(input$acs_estrato==T, input$as_estrato==T)   ), # Precisa que o usuario tente calcular acs ou as por estrato
+        input$tabset_inv %in% c("Amostragem casual simples", "Amostragem sistemática") ) # precisa que a aba acs ou as seja selecionada
+    validate(
+      need(!is.null(input$col.estrato) , # estrato nao e nulo? quando a resposta for nao a mensagem aparece
+           "Variável 'estrato' não definida. A amostragem será feita para todos os dados." ), errorClass = "AVISO")
+
+
+
+  })
 
   # funcao acs aplicada em invData
   tabacs <- reactive({
@@ -1771,18 +2047,26 @@ shinyServer(function(input, output, session) {
 
     validate(
       need(dados, "Por favor, faça a totalização de parcelas, ou o upload de uma base de dados em nível de parcela" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
       need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "),
       need(nm$area.parcela,"Por favor mapeie a coluna ou insira um valor referente a 'area.parcela'  "),
       need(nm$area.total,"Por favor mapeie a coluna ou insira um valor referente a 'area.total'  ")
     )
 
+    grupos_name <- NULL
+    # Fazer amostragem por estrato somente se o usuario marcar sim
+    if(is.null(input$acs_estrato)){
+
+    }else if(input$acs_estrato){
+      grupos_name <- nm$estrato
+    }
 
     x <-     acs(df             = dados,
-                 VCC            = nm$vcc,
+                 Yi             = input$yi_inv,
                  area_parcela   = nm$area.parcela,
                  area_total     = nm$area.total,
-                 idade          = NA,
-                 grupos         = nm$estrato,
+                 #      idade          = nm$idade,
+                 grupos         = grupos_name,
                  alpha          = input$alpha_inv,
                  Erro           = input$erro_inv,
                  casas_decimais = input$cd_inv,
@@ -1826,7 +2110,7 @@ shinyServer(function(input, output, session) {
 
   })
 
-  # Amostragem ace ####
+  # Amostragem casual estratificada ####
 
   # funcao ace aplicada em invData
   list_ace <- reactive({
@@ -1836,6 +2120,7 @@ shinyServer(function(input, output, session) {
 
     validate(
       need(dados, "Por favor, faça a totalização de parcelas, ou o upload de uma base de dados em nível de parcela" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
       need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "),
       need(nm$area.parcela,"Por favor mapeie a coluna ou insira um valor referente a 'area.parcela'  "),
       need(nm$area.total,"Por favor mapeie a coluna ou insira um valor referente a 'area.total'  "),
@@ -1843,11 +2128,11 @@ shinyServer(function(input, output, session) {
     )
 
     x <- ace(df             = dados,
-             VCC            = nm$vcc,
+             Yi             = input$yi_inv,
              area_parcela   = nm$area.parcela,
              area_estrato   = nm$area.total,
              grupos         = nm$estrato,
-             idade          = NA,
+             # idade          = nm$idade,
              alpha          = input$alpha_inv,
              Erro           = input$erro_inv,
              casas_decimais = input$cd_inv,
@@ -1908,6 +2193,19 @@ shinyServer(function(input, output, session) {
 
   # Amostragem sistematica ####
 
+  # UI para rodar as por estrato
+  output$as_estrato_rb <- renderUI({
+
+    req(input$tabset_inv=="Amostragem sistemática")
+
+    radioButtons("as_estrato",
+                 "Calcular uma amostragem sistematica para cada estrato?",
+                 choices = c("Sim"=T,"Nao"=F),
+                 selected = F,
+                 inline = T)
+
+  })
+
   # funcao as aplicada em invData
   tabas <- reactive({
 
@@ -1916,19 +2214,28 @@ shinyServer(function(input, output, session) {
 
     validate(
       need(dados, "Por favor, faça a totalização de parcelas, ou o upload de uma base de dados em nível de parcela" ),
+      need(nrow(dados)>0, "Base de dados vazia"),
       need(nm$vcc,"Por favor mapeie a coluna referente a 'volume com casca' ou estime-o na aba preparação  "),
       need(nm$area.parcela,"Por favor mapeie a coluna ou insira um valor referente a 'area.parcela'  "),
       need(nm$area.total,"Por favor mapeie a coluna ou insira um valor referente a 'area.total'  ")
     )
 
+    grupos_name <- NULL
+    # Fazer amostragem por estrato somente se o usuario marcar sim
+    if(is.null(input$as_estrato)){
+
+    }else if(input$as_estrato){
+      grupos_name <- nm$estrato
+    }
+
     dados <- invData()
 
     x <- as_diffs(df             = dados,
-                  VCC            = nm$vcc,
+                  Yi             = input$yi_inv,
                   area_parcela   = nm$area.parcela,
                   area_total     = nm$area.total,
-                  idade          = NA,
-                  grupos         = nm$estrato,
+                  # idade          = nm$idade,
+                  grupos         = grupos_name,
                   alpha          = input$alpha_inv,
                   Erro           = input$erro_inv,
                   casas_decimais = input$cd_inv,
@@ -1972,84 +2279,184 @@ shinyServer(function(input, output, session) {
 
   # Download tabelas ####
 
-  datasetInput <- reactive({
-    switch(input$dataset,
-           "Dados inconsistentes"              = consist_fun(),
-           "Dado utilizado / preparado"        = rawData(),
-           "Indice diversidade"                = tabdiversidade(),
-           "Matriz similaridade - Jaccard"     = tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "),
-           "Matriz similaridade - Sorensen"    = tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " "),
-           "Indice de agregacao"               = tabagregate(),
-           "Estrutura"                         = tabestrutura(),
-           "Distribuicao diametrica geral"     = dd_list()[["dd_geral"]],
-           "Dist. Diametrica Indv. por especie"= dd_list()[["dd_especie_indv_cc_column"]],
-           "Dist. Diametrica Vol. por especie" = dd_list()[["dd_especie_vol_cc_column"]],
-           "Dist. Diametrica G por especie"    = dd_list()[["dd_especie_G_cc_column"]],
-           "BDq Meyer"                         = BDq_list()[[1]],
-           "BDq Meyer - Coeficientes"          = data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )),
-           "Totalizacao de parcelas"           = totData(),
-           "Amostragem Casual Simples"         = tabacs(),
-           "Amostragem Casual Estratificada 1" = list_ace()[[1]],
-           "Amostragem Casual Estratificada 2" = list_ace()[[2]],
-           "Amostragem Sistematica"            = tabas()
-    )
+  output$checkbox_df_download <- renderUI({
+
+    checkboxGroupInput("dataset", h3("Escolha uma ou mais tabelas, e clique no botão abaixo:"),
+                       choices =  c(
+                         "Dados inconsistentes"              ,
+                         "Dado nivel arvore"                    ,
+                         "Indice diversidade"                ,
+                         "Matriz similaridade - Jaccard"     ,
+                         "Matriz similaridade - Sorensen"    ,
+                         "Indice de agregacao"               ,
+                         "Estrutura"                         ,
+                         "Distribuicao diametrica geral"     ,
+                         "Dist. Diametrica Indv. por especie",
+                         "Dist. Diametrica Vol. por especie" ,
+                         "Dist. Diametrica G por especie"    ,
+                         "BDq Meyer"                         ,
+                         "BDq Meyer - Coeficientes"          ,
+                         "Totalizacao de parcelas"           ,
+                         "Amostragem Casual Simples"         ,
+                         "Amostragem Casual Estrat 1" ,
+                         "Amostragem Casual Estrat 2" ,
+                         "Amostragem Sistematica"
+                       ), inline = T )
+
+
   })
 
-  output$table <- renderDataTable({
+  list_of_df_to_download <- reactive({
 
-    datadownload <- datasetInput()
+    L <- list()
 
-    datatable( datadownload,
-               options = list(searching = FALSE,
-                              paging=T,
-                              initComplete = JS(
-                                "function(settings, json) {",
-                                "$(this.api().table().header()).css({'background-color': '#00a90a', 'color': '#fff'});",
-                                "}")
+    if("Dados inconsistentes" %in% input$dataset ) {
+      L[["Dados inconsistentes"]] <- try( consist_fun(), silent = T)
+    }
 
-               )  )
+    if("Dado nivel arvore" %in% input$dataset ) {
+      L[["Dado nivel arvore"]] <-  try(arvData(), silent = T)
+    }
+
+    if("Indice diversidade" %in% input$dataset ) {
+      L[["Indice diversidade"]] <-  try(tabdiversidade(), silent=T)
+    }
+
+    if("Matriz similaridade - Jaccard" %in% input$dataset ) {
+      L[["Matriz similaridade - Jaccard"]] <-  try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "), silent=T)
+    }
+
+
+    if("Matriz similaridade - Sorensen" %in% input$dataset ) {
+      L[["Matriz similaridade - Sorensen"]] <- try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " ") , silent=T)
+    }
+
+    if("Indice de agregacao" %in% input$dataset ) {
+      L[["Indice de agregacao"]] <-  try(tabagregate(), silent=T)
+    }
+
+    if("Estrutura" %in% input$dataset ) {
+      L[["Estrutura"]] <- try(tabestrutura() , silent = T)
+    }
+
+    if("Distribuicao diametrica geral" %in% input$dataset ) {
+      L[["Distribuicao diametrica geral"]] <-  try(dd_list()[["dd_geral"]], silent=T)
+    }
+
+    if("Dist. Diametrica Indv. por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica Indv. por especie"]] <- try(dd_list()[["dd_especie_indv_cc_column"]] , silent=T)
+    }
+
+    if("Dist. Diametrica Vol. por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica Vol. por especie"]] <- try(dd_list()[["dd_especie_vol_cc_column"]]  , silent=T)
+    }
+
+    if("Dist. Diametrica G por especie" %in% input$dataset ) {
+      L[["Dist. Diametrica G por especie"]] <- try(dd_list()[["dd_especie_G_cc_column"]], silent=T)
+    }
+
+    if("BDq Meyer" %in% input$dataset ) {
+      L[["BDq Meyer"]] <-   try(BDq_list()[[1]], silent=T)
+    }
+
+    if("BDq Meyer - Coeficientes"  %in% input$dataset ) {
+      L[["BDq Meyer - Coeficientes" ]] <- try( data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )), silent=T)
+    }
+
+    if("Totalizacao de parcelas" %in% input$dataset ) {
+      L[["Totalizacao de parcelas"]] <- try(tot_parcData() , silent=T)
+    }
+
+    if("Amostragem Casual Simples" %in% input$dataset ) {
+      L[["Amostragem Casual Simples"]] <- try(tabacs() , silent=T)
+    }
+
+    if("Amostragem Casual Estrat 1" %in% input$dataset ) {
+      L[["Amostragem Casual Estrat 1"]] <- try(list_ace()[[1]], silent = T)
+    }
+
+    if("Amostragem Casual Estrat 2" %in% input$dataset ) {
+      L[["Amostragem Casual Estrat 2"]] <- try(list_ace()[[2]] , silent=T)
+    }
+
+    if("Amostragem Sistematica" %in% input$dataset ) {
+      L[["Amostragem Sistematica"]] <- try( tabas() , silent=T)
+    }
+
+    L
+
+  })
+  list_of_df_all <- reactive({
+
+    L <- list()
+
+    L[["Dados inconsistentes"]] <- try( consist_fun(), silent = T)
+
+
+    L[["Dado nivel arvore"]] <-  try(arvData(), silent = T)
+
+    L[["Indice diversidade"]] <-  try(tabdiversidade(), silent=T)
+
+    L[["Matriz similaridade - Jaccard"]] <-  try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[1]]), " "), silent=T)
+
+    L[["Matriz similaridade - Sorensen"]] <- try(tibble::rownames_to_column(as.data.frame(tabmsimilaridade()[[2]]), " ") , silent=T)
+
+    L[["Indice de agregacao"]] <-  try(tabagregate(), silent=T)
+
+    L[["Estrutura"]] <- try(tabestrutura() , silent = T)
+
+    L[["Distribuicao diametrica geral"]] <-  try(dd_list()[["dd_geral"]], silent=T)
+
+    L[["Dist. Diametrica Indv. por especie"]] <- try(dd_list()[["dd_especie_indv_cc_column"]] , silent=T)
+
+    L[["Dist. Diametrica Vol. por especie"]] <- try(dd_list()[["dd_especie_vol_cc_column"]]  , silent=T)
+
+    L[["Dist. Diametrica G por especie"]] <- try(dd_list()[["dd_especie_G_cc_column"]], silent=T)
+
+    L[["BDq Meyer"]] <-   try(BDq_list()[[1]], silent=T)
+
+    L[["BDq Meyer - Coeficientes" ]] <- try( data.frame( "Coeficientes" = c("b0", "b1"),"Valor"= c( BDq_list()[[3]][1], BDq_list()[[3]][2] )), silent=T)
+
+    L[["Totalizacao de parcelas"]] <- try(tot_parcData() , silent=T)
+
+    L[["Amostragem Casual Simples"]] <- try(tabacs() , silent=T)
+
+    L[["Amostragem Casual Estrat 1"]] <- try(list_ace()[[1]], silent = T)
+
+    L[["Amostragem Casual Estrat 2"]] <- try(list_ace()[[2]] , silent=T)
+
+    L[["Amostragem Sistematica"]] <- try( tabas() , silent=T)
+
+    L
 
   })
 
   output$downloadData <- downloadHandler(
-    filename = function() {
+    filename = function(){"tabelas_app_nativas.xlsx"},
 
-      if(input$datasetformat==".csv")
-      {
-        paste(input$dataset, '.csv', sep='')
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        paste(input$dataset, '.xlsx', sep='')
-      }
-    },
+    content = function(file){xlsx.write.list(file, list_of_df_to_download() )}
 
-    content = function(file) {
-      if(input$datasetformat==".csv")
-      {
-        write.csv2(datasetInput(), file, row.names = F)
-      }
-      else if(input$datasetformat==".xlsx")
-      {
-        xlsx::write.xlsx2(as.data.frame( datasetInput() ), file, row.names = F)
-      }
+  )
 
+  output$downloadAllData <- downloadHandler(
+    filename = function(){"tabelas_app_nativas.xlsx"},
 
+    content = function(file){xlsx.write.list(file, list_of_df_all() )}
 
-    }
   )
 
   # Download graficos ####
 
   graphInput <- reactive({
     switch(input$graph_d,
-           "Dendrograma - Jaccard"     = msim1_graph(),
-           "Dendrograma - Sorensen"    = msim2_graph(),
-           "Grafico IVI"               = ivi_graph(),
-           "Indv. por especie por CC"  = dd_g1(),
-           "Vol. por especie por CC"   = dd_g2(),
-           "G por especie por CC"      = dd_g3(),
-           "Distribuicao - BDq Meyer"  = BDq_graph() )
+           "Dendrograma - Jaccard"      = msim1_graph(),
+           "Dendrograma - Sorensen"     = msim2_graph(),
+           "Grafico IVI"                = ivi_graph(),
+           "Grafico Estrutura Vertical" = est.vert_graph(),
+           "Indv. por ha por CC"        = dd_g1(),
+           "Vol. por ha por CC"         = dd_g2(),
+           "G por ha por CC"            = dd_g3(),
+           "Distribuicao - BDq Meyer"   = BDq_graph() )
   })
 
   output$graph_d_out <- renderPlot({
@@ -2086,10 +2493,8 @@ shinyServer(function(input, output, session) {
 
     }
   )
-
-  # ####
-  # session end
-  session$onSessionEnded(function() {
+  # session end ####
+   session$onSessionEnded(function() {
     stopApp()
     q("no")
   })
