@@ -69,7 +69,12 @@ shinyUI(
                             "))
             ),
 
-
+          tags$head(
+            tags$link(
+              rel = "icon",
+              type = "image/x-icon",
+              href = "http://localhost:1984/default.ico")
+          ),
 
           # Version ####
           navbarPage("App Inventário de Nativas 2.0.9",
