@@ -1,6 +1,6 @@
 Versão Pré-Release
 
-Para rodar este apliativo é necessário ter instalado no computador o Java e a versão x86 (32bits) do R 3.4.1. 
+Para rodar este apliativo é necessário ter instalado no computador o RTools e a versão x86 (32bits) do R 3.5.1. 
 
 Este aplicativo é o produto de uma dissertação de mestrado em andamento, realizada na Universidade federal dos Vales do Jequitinhonha e Mucuri - UFVJM, no laboratório de Manejo Florestal/treelab, Departamento de Engenharia Florestal, Diamantina/MG.
 

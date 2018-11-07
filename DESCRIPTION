@@ -1,7 +1,7 @@
 Package: AppInventarioNativas
 Type: Package
 Title: AppInventarioNativas
-Version: 1.0.1
+Version: 1.0.2
 Author: Sollano Rabelo Braga
 Maintainer: Sollano Rabelo Braga <sollanorb@gmail.com>
 Description: Shiny app for processing natural forests data.
