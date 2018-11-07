@@ -5,6 +5,8 @@
 # build code
 build_exe.R
 # RInno files
+inst/app/library/
+inst/app/exe_folder/
 Rinno_files/AppInventarioNativas.bat
 Rinno_files/AppInventarioNativas.iss
 Rinno_files/default.ico
