@@ -7,13 +7,4 @@ build_exe.R
 # RInno files
 inst/app/library/
 inst/app/exe_folder/
-Rinno_files/AppInventarioNativas.bat
-Rinno_files/AppInventarioNativas.iss
-Rinno_files/default.ico
-Rinno_files/exe_folder/
-Rinno_files/infoafter.txt
-Rinno_files/infobefore.txt
-Rinno_files/setup.ico
-Rinno_files/utils/
-RInno_files/bin/
-RInno_files/library/
+RInno_files/
