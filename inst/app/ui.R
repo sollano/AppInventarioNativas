@@ -1,4 +1,3 @@
-options(java.parameters = "-Xss2048k",shiny.maxRequestSize=25*1024^2)
 library(shiny)
 suppressPackageStartupMessages(library(DT))
 #library(plotly)
@@ -12,9 +11,7 @@ library(lazyeval)
 library(ggplot2)
 library(ggdendro)
 library(ggthemes)
-suppressPackageStartupMessages(library(xlsx))
-library(rJava)
-library(xlsxjars)
+library(openxlsx)
 library(rmarkdown)
 
 shinyUI(
@@ -74,9 +71,9 @@ shinyUI(
 
 
 
-
-          navbarPage("App Inventário de Nativas",
-
+          # Version ####
+          navbarPage("App Inventário de Nativas 2.0.9",
+                     #         ####
                      theme = "green_yeti2.css",
                      # theme = "green.css", # seleciona um tema contido na pasta www
                      # theme = shinythemes::shinytheme("paper"), # seleciona um tema utilizando pacote
@@ -119,7 +116,7 @@ shinyUI(
                                                choices = c("Dados em nivel de fuste",
                                                            "Dados em nivel de arvore",
                                                            "Dados em nivel de parcela"),
-                                               selected = "Dados em nivel de fuste"),
+                                               selected = "Dados em nivel de arvore"),
 
                                   uiOutput("upload"), # tipos de arquivos aceitos
                                   hr(),
@@ -159,7 +156,7 @@ shinyUI(
 
                                   column(4,
                                          wellPanel(
-                                           h3("Parcela"),
+                                           h3("Parcela*"),
                                            p("Selecione o nome da variável referente à 'Parcela':"#,
                                              #style = "font-family: 'Source Sans Pro';"
                                            ),
@@ -168,7 +165,7 @@ shinyUI(
 
                                   column(4,
                                          wellPanel(
-                                           h3("Espécie"),
+                                           h3("Espécie*"),
                                            p("Selecione o nome da variável referente à 'Espécie':"#,
                                              #style = "font-family: 'Source Sans Pro';"
                                            ),
@@ -182,7 +179,7 @@ shinyUI(
 
                                   column(4,
                                          wellPanel(
-                                           h3("Circunferência (CAP)"),
+                                           h3("Circunferência (CAP)*"),
                                            p("Selecione o nome da variável referente à 'CAP':"#,
                                              #style = "font-family: 'Source Sans Pro';"
                                            ),
@@ -192,7 +189,7 @@ shinyUI(
 
                                   column(4,
                                          wellPanel(
-                                           h3("Diâmetro (DAP)"),
+                                           h3("Diâmetro (DAP)*"),
                                            p("Selecione o nome da variável referente à 'DAP':"#,
                                              #style = "font-family: 'Source Sans Pro';"
                                            ),
@@ -326,10 +323,10 @@ shinyUI(
                                   sidebarPanel(
 
                                     h3("Intervalo de classe"),
-                                    numericInput("int.classe", "Insira o intervalo de classe:", 10, 1, 50, 0.5),
+                                    numericInput("int.classe", "Insira o intervalo de classe:", 5, 1, 50, 0.5),
 
                                     h3("Diâmetro mínimo"),
-                                    numericInput("diam.min", "Insira o diâmetro mínimo:", 10, 1, 100, 1),
+                                    numericInput("diam.min", "Insira o diâmetro mínimo:", 1, 1, 100, 1),
 
                                     uiOutput("selec_rotuloNI"),
 
@@ -343,9 +340,9 @@ shinyUI(
                                     uiOutput("rm_vars"),
                                     uiOutput("selec_area_parcela_num"),
                                     uiOutput("selec_area_total_num"),
-                                    uiOutput("ui_estvol1"),
-                                    uiOutput("ui_estvol3"),
-                                    uiOutput("ui_estvol4"),
+                                    uiOutput("ui_estvcc1"),
+                                    uiOutput("ui_estvcc3"),
+                                    uiOutput("ui_estvcc4"),
                                     uiOutput("checkbox_calc.est.vert"),
                                     uiOutput("consist_warning1")
 
@@ -570,7 +567,7 @@ shinyUI(
                                                                  label = "Selecione o nível de significância:",
                                                                  min = 0.01,
                                                                  max = 0.10,
-                                                                 value = 0.05,
+                                                                 value = 0.10,
                                                                  step = 0.01)
                                               ),
 
@@ -609,8 +606,8 @@ shinyUI(
                                             fluidRow(
                                               radioButtons("yi_inv",
                                                            label="Selecione a variável utilizada nas estatísticas:",
-                                                           choices = c("IndvHA", "G_HA","VCC_HA"),
-                                                           selected = "VCC_HA",
+                                                           choices = c("Indv", "G","VCC"),
+                                                           selected = "VCC",
                                                            inline=T )
                                             ),
                                             fluidRow(
@@ -721,6 +718,3 @@ shinyUI(
           ) # navbarPage
             )#tagList
           ) # ShinyUI
-
-
-
